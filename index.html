@@ -48,21 +48,23 @@
                 <a href="#" class="nav-link active" data-view="dashboard">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                         <path
-                            d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                            d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                     </svg>
-                    Home
+                    Dashboard
                 </a>
                 <a href="#" class="nav-link" data-view="list">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                        <path
+                            d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                     </svg>
                     Properties
                     <span class="nav-badge" id="facilities-count">0</span>
                 </a>
                 <a href="#" class="nav-link" data-view="providers">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path
-                            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                        <path fill-rule="evenodd"
+                            d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                            clip-rule="evenodd" />
                     </svg>
                     Providers
                     <span class="nav-badge" id="providers-count">0</span>
@@ -145,10 +147,44 @@
 
                 <!-- Stats Cards -->
                 <div class="stats-row">
-                    <div class="stat-card stat-card-fixed">
-                        <div class="stat-label">Total Care Homes</div>
-                        <div class="stat-value" id="stat-total">0</div>
-                        <div class="stat-chart" id="spark-total"></div>
+                    <div class="stats-main-metrics">
+                        <div class="stat-card stat-card-main">
+                            <div class="stat-icon-main purple">
+                                <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="stat-total">0</div>
+                                <div class="stat-label">Total Properties</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-main">
+                            <div class="stat-icon-main indigo">
+                                <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="stat-providers-total">0</div>
+                                <div class="stat-label">Total Providers</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-main">
+                            <div class="stat-icon-main teal">
+                                <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="stat-people-total">0</div>
+                                <div class="stat-label">Total People</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="stats-ratings">
                         <div class="stat-card stat-card-rating">
@@ -830,37 +866,79 @@
             <div class="modal-body people-modal-body">
                 <div class="people-modal-content">
                     <div class="people-modal-left">
-                        <!-- Person Info Section -->
-                        <div class="person-info-section">
-                            <div class="person-avatar-large" id="person-avatar">??</div>
-                            <div class="person-role" id="person-role">Decision Maker</div>
-                        </div>
-
-                        <!-- Person Stats Section -->
-                        <div class="person-stats-section" id="person-stats-section">
+                        <!-- Person Stats Section - Redesigned with icons -->
+                        <div class="person-stats-section person-stats-redesigned" id="person-stats-section">
                             <div class="person-stat-row">
                                 <div class="person-stat">
+                                    <div class="stat-icon-wrapper">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                            <path
+                                                d="M7 2a1 1 0 00-.707 1.707L7 4.414v3.758a1 1 0 01-.293.707l-4 4C.817 14.769 2.156 18 4.828 18h10.344c2.673 0 4.012-3.231 2.122-5.121l-4-4A1 1 0 0113 8.172V4.414l.707-.707A1 1 0 0013 2H7zm2 6.172V4h2v4.172a3 3 0 00.879 2.12l1.027 1.028a4 4 0 01-5.812 0l1.027-1.028A3 3 0 009 8.172z" />
+                                        </svg>
+                                    </div>
                                     <span class="stat-value" id="person-total-beds">0</span>
-                                    <span class="stat-label">Total Beds</span>
+                                    <span class="stat-label">beds</span>
                                 </div>
                                 <div class="person-stat">
+                                    <div class="stat-icon-wrapper">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                            <path
+                                                d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                                        </svg>
+                                    </div>
                                     <span class="stat-value" id="person-total-properties">0</span>
-                                    <span class="stat-label">Properties</span>
+                                    <span class="stat-label">properties</span>
                                 </div>
                             </div>
                             <div class="person-stat-row">
                                 <div class="person-stat">
+                                    <div class="stat-icon-wrapper">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
                                     <span class="stat-value" id="person-avg-beds">0</span>
-                                    <span class="stat-label">Avg Beds/Property</span>
+                                    <span class="stat-label">avg per property</span>
                                 </div>
                                 <div class="person-stat">
+                                    <div class="stat-icon-wrapper">
+                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    </div>
                                     <span class="stat-value" id="person-tenure">—</span>
-                                    <span class="stat-label">Tenure</span>
+                                    <span class="stat-label">tenure</span>
                                 </div>
                             </div>
                             <div class="person-rating-row" id="person-rating-row">
                                 <span class="rating-label">Portfolio Rating:</span>
                                 <span class="badge" id="person-rating-badge">Unknown</span>
+                            </div>
+                        </div>
+
+                        <!-- Most Recent Report Context -->
+                        <div class="person-context-section" id="person-context-section">
+                            <h4>
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                Most Recent Report
+                            </h4>
+                            <div class="person-context-card">
+                                <div class="context-row">
+                                    <span class="context-label">Last Inspection</span>
+                                    <span class="context-value" id="person-last-inspection">—</span>
+                                </div>
+                                <div class="context-row">
+                                    <span class="context-label">Rating</span>
+                                    <span class="badge" id="person-context-rating">Unknown</span>
+                                </div>
                             </div>
                         </div>
 

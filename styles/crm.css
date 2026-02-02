@@ -393,8 +393,71 @@ body {
 /* Stats Row - New Layout */
 .stats-row {
     display: flex;
+    flex-direction: column;
     gap: 16px;
     margin-bottom: 24px;
+}
+
+.stats-main-metrics {
+    display: flex;
+    gap: 16px;
+}
+
+.stat-card-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+}
+
+.stat-icon-main {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-icon-main svg {
+    width: 24px;
+    height: 24px;
+}
+
+.stat-icon-main.purple {
+    background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+    color: white;
+}
+
+.stat-icon-main.indigo {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    color: white;
+}
+
+.stat-icon-main.teal {
+    background: linear-gradient(135deg, #2dd4bf, #14b8a6);
+    color: white;
+}
+
+.stat-card-main .stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-card-main .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-dark);
+}
+
+.stat-card-main .stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 .stat-card-fixed {
@@ -403,7 +466,6 @@ body {
 }
 
 .stats-ratings {
-    flex: 1;
     display: flex;
     gap: 12px;
 }
@@ -4116,7 +4178,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* Person Stats Section */
+/* Person Stats Section - Redesigned */
 .person-stats-section {
     padding: 16px;
     background: var(--bg-main);
@@ -4126,30 +4188,54 @@ body {
     gap: 12px;
 }
 
-.person-stat-row {
+.person-stats-redesigned .person-stat-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-.person-stat {
+.person-stats-redesigned .person-stat {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px;
+    padding: 16px 12px;
     background: var(--bg-card);
     border-radius: var(--radius);
     border: 1px solid var(--border);
+    gap: 6px;
 }
 
-.person-stat .stat-value {
-    font-size: 22px;
+.person-stats-redesigned .stat-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--purple-bg, rgba(139, 92, 246, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--purple);
+    margin-bottom: 4px;
+}
+
+.person-stats-redesigned .person-stat:nth-child(1) .stat-icon-wrapper {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.person-stats-redesigned .person-stat:nth-child(2) .stat-icon-wrapper {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.person-stats-redesigned .person-stat .stat-value {
+    font-size: 28px;
     font-weight: 700;
     color: var(--text-dark);
+    line-height: 1;
 }
 
-.person-stat .stat-label {
-    font-size: 11px;
+.person-stats-redesigned .person-stat .stat-label {
+    font-size: 10px;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -4169,6 +4255,54 @@ body {
 .person-rating-row .rating-label {
     font-size: 13px;
     color: var(--text-secondary);
+}
+
+/* Person Context Section - Most Recent Report */
+.person-context-section {
+    background: var(--bg-main);
+    border-radius: var(--radius);
+    padding: 16px;
+}
+
+.person-context-section h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-dark);
+}
+
+.person-context-section h4 svg {
+    color: var(--purple);
+}
+
+.person-context-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.context-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.context-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.context-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dark);
 }
 
 /* Contact pending state */

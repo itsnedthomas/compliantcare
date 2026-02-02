@@ -349,6 +349,25 @@ var CRMApp = {
 
         // Animate stats
         this.animateValue('stat-total', stats.total);
+
+        // Calculate and animate providers count
+        var providersSet = new Set();
+        facilities.forEach(function (f) {
+            if (f.provider && f.provider.id) {
+                providersSet.add(f.provider.id);
+            }
+        });
+        this.animateValue('stat-providers-total', providersSet.size);
+
+        // Calculate and animate people count (unique nominated individuals)
+        var peopleSet = new Set();
+        facilities.forEach(function (f) {
+            if (f.nominatedIndividualName) {
+                peopleSet.add(f.nominatedIndividualName.toLowerCase().trim());
+            }
+        });
+        this.animateValue('stat-people-total', peopleSet.size);
+
         this.animateValue('stat-outstanding', stats.outstanding);
         this.animateValue('stat-good', stats.good);
         this.animateValue('stat-requires', stats.requiresImprovement);
@@ -3768,7 +3787,6 @@ var CRMApp = {
         var nameEl = document.getElementById('people-modal-name');
         var providerEl = document.getElementById('people-modal-provider');
         var countEl = document.getElementById('people-modal-count');
-        var avatarEl = document.getElementById('person-avatar');
         var providerNameEl = document.getElementById('person-provider-name');
         var providerCountEl = document.getElementById('person-provider-count');
         var linkedInEl = document.getElementById('person-linkedin');
@@ -3780,19 +3798,16 @@ var CRMApp = {
         if (nameEl) nameEl.textContent = person.name;
         if (providerEl) providerEl.textContent = person.providerName;
         if (countEl) countEl.textContent = this.formatNumber(person.propertyCount) + ' properties';
-        if (avatarEl) avatarEl.textContent = this.getInitials(person.name);
         if (providerNameEl) providerNameEl.textContent = person.providerName;
         if (providerCountEl) providerCountEl.textContent = person.propertyCount + ' properties';
 
         // Populate stats section
-        var roleEl = document.getElementById('person-role');
         var totalBedsEl = document.getElementById('person-total-beds');
         var totalPropsEl = document.getElementById('person-total-properties');
         var avgBedsEl = document.getElementById('person-avg-beds');
         var tenureEl = document.getElementById('person-tenure');
         var ratingBadgeEl = document.getElementById('person-rating-badge');
 
-        if (roleEl) roleEl.textContent = person.roleLabel || 'Decision Maker';
         if (totalBedsEl) totalBedsEl.textContent = this.formatNumber(person.totalBeds || 0);
         if (totalPropsEl) totalPropsEl.textContent = this.formatNumber(person.propertyCount || 0);
 
@@ -3801,13 +3816,34 @@ var CRMApp = {
         if (avgBedsEl) avgBedsEl.textContent = avgBeds;
 
         // Format tenure
-        var tenureText = person.yearsAtProvider > 0 ? Math.round(person.yearsAtProvider) + ' years' : 'Unknown';
+        var tenureText = person.yearsAtProvider > 0 ? Math.round(person.yearsAtProvider) + ' yrs' : '—';
         if (tenureEl) tenureEl.textContent = tenureText;
 
         // Rating badge
         if (ratingBadgeEl) {
             ratingBadgeEl.textContent = person.lastReportRating || 'Unknown';
             ratingBadgeEl.className = 'badge ' + this.getRatingClass(person.lastReportRating);
+        }
+
+        // Populate context section - Most Recent Report
+        var lastInspectionEl = document.getElementById('person-last-inspection');
+        var contextRatingEl = document.getElementById('person-context-rating');
+
+        if (lastInspectionEl) {
+            if (person.lastInspectionDate) {
+                var inspDate = new Date(person.lastInspectionDate);
+                lastInspectionEl.textContent = inspDate.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            } else {
+                lastInspectionEl.textContent = '—';
+            }
+        }
+        if (contextRatingEl) {
+            contextRatingEl.textContent = person.lastReportRating || 'Unknown';
+            contextRatingEl.className = 'badge ' + this.getRatingClass(person.lastReportRating);
         }
 
         // LinkedIn search link - use linkedin.com at end (not site:linkedin.com)
@@ -3845,11 +3881,39 @@ var CRMApp = {
         // Show modal
         if (modal) modal.classList.add('active');
 
-        // Initialize mini map
+        // Fetch facilities for this person's provider and render map
         var self = this;
-        setTimeout(function () {
+        this.fetchProviderFacilitiesForMap(person).then(function (facilities) {
+            person.providerFacilities = facilities;
             self.renderPeopleMiniMap(person);
-        }, 100);
+        });
+    },
+
+    fetchProviderFacilitiesForMap: async function (person) {
+        var providerId = person.providerId ? person.providerId.replace('provider-', '') : null;
+        if (!providerId) return [];
+
+        try {
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/facilities?select=name,overallRating,latitude,longitude&Provider%20ID=eq.' + encodeURIComponent(providerId),
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                console.error('Failed to fetch facilities for provider');
+                return [];
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching facilities for map:', error);
+            return [];
+        }
     },
 
     checkPersonEnrichment: function (person) {
@@ -4031,30 +4095,28 @@ var CRMApp = {
         };
 
         var self = this;
-        var provider = person.provider;
+        var facilities = person.providerFacilities || [];
 
-        if (provider && provider.facilities) {
-            provider.facilities.forEach(function (f) {
-                var lat = f.address?.latitude;
-                var lng = f.address?.longitude;
+        facilities.forEach(function (f) {
+            var lat = f.latitude;
+            var lng = f.longitude;
 
-                if (!lat || !lng) return;
+            if (!lat || !lng) return;
 
-                var color = colors[f.overallRating] || '#8c8c8c';
+            var color = colors[f.overallRating] || '#8c8c8c';
 
-                var icon = L.divIcon({
-                    html: '<div style="width:12px;height:12px;background:' + color + ';border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>',
-                    className: 'people-map-marker',
-                    iconSize: [12, 12],
-                    iconAnchor: [6, 6]
-                });
-
-                var marker = L.marker([lat, lng], { icon: icon }).addTo(self.peopleMiniMap);
-                marker.bindPopup('<div class="popup-title">' + self.escapeHtml(f.name) + '</div><div class="popup-meta">' + (f.overallRating || 'Not Rated') + '</div>');
-
-                bounds.push([lat, lng]);
+            var icon = L.divIcon({
+                html: '<div style="width:12px;height:12px;background:' + color + ';border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>',
+                className: 'people-map-marker',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
             });
-        }
+
+            var marker = L.marker([lat, lng], { icon: icon }).addTo(self.peopleMiniMap);
+            marker.bindPopup('<div class="popup-title">' + self.escapeHtml(f.name) + '</div><div class="popup-meta">' + (f.overallRating || 'Not Rated') + '</div>');
+
+            bounds.push([lat, lng]);
+        });
 
         // Fit bounds if we have markers
         if (bounds.length > 0) {

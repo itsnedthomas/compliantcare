@@ -103,3 +103,6 @@ Estimated time for batch: 1.7 minutes
   Error: HTTPSConnectionPool(host='qdrbwvxqtgwjgitcambn.supabase.co', port=443): Max retries exceeded with url: /functions/v1/cqc-enrich-full (Caused by SSLError(SSLError(0, 'unknown error (_ssl.c:4293)')))
 [500/1000] (50.0%) | Success: 499 | Failed: 1 | Rate: 1.0/sec | ETA: 8.6 min
 [600/1000] (60.0%) | Success: 599 | Failed: 1 | Rate: 1.0/sec | ETA: 7.0 min
+[700/1000] (70.0%) | Success: 699 | Failed: 1 | Rate: 1.0/sec | ETA: 5.2 min
+  Error: HTTPSConnectionPool(host='qdrbwvxqtgwjgitcambn.supabase.co', port=443): Max retries exceeded with url: /functions/v1/cqc-enrich-full (Caused by SSLError(SSLError(0, 'unknown error (_ssl.c:4293)')))
+[800/1000] (80.0%) | Success: 798 | Failed: 2 | Rate: 0.9/sec | ETA: 3.6 min
