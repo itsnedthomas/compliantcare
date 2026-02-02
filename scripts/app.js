@@ -3941,6 +3941,7 @@ var CRMApp = {
     },
 
     showPersonDetail: function (personId) {
+        var self = this; // Define self at the start so it's available throughout the function
         var person = this.peopleData.find(function (p) { return p.id === personId; });
         if (!person) return;
 
@@ -3973,35 +3974,50 @@ var CRMApp = {
         if (countEl) countEl.textContent = this.formatNumber(person.propertyCount) + ' properties';
 
         // Provider section - show all providers or single provider
-        if (providerNameEl && providerCountEl) {
-            var providerSection = document.querySelector('.person-provider-section');
-            if (providerSection) {
-                var providerCard = document.getElementById('person-provider-card');
-                if (isMultiProvider) {
-                    // Build a list of all providers
-                    var providersHTML = '<div class="multi-provider-list">';
-                    person.providers.forEach(function (prov) {
-                        providersHTML += '<div class="multi-provider-item">' +
-                            '<div class="multi-provider-name">' + self.escapeHtml(prov.provider_name) + '</div>' +
-                            '<div class="multi-provider-stats">' +
-                            prov.total_properties + ' properties · ' +
-                            self.formatNumber(prov.total_beds) + ' beds' +
-                            '</div>' +
-                            '</div>';
-                    });
-                    providersHTML += '</div>';
-                    providerSection.querySelector('h4').innerHTML = 'Providers <span class="provider-count-small">(' + person.providerCount + ')</span>';
-                    providerCard.innerHTML = providersHTML;
-                    providerCard.onclick = null; // Remove click handler for multi-provider
-                    providerCard.style.cursor = 'default';
-                } else {
-                    // Single provider - keep existing behavior
-                    providerSection.querySelector('h4').textContent = 'Provider';
-                    providerNameEl.textContent = person.providerName;
-                    providerCountEl.textContent = person.propertyCount + ' properties';
-                    providerCard.onclick = function () { CRMApp.openProviderFromPerson(); };
-                    providerCard.style.cursor = 'pointer';
-                }
+        var providerSection = document.querySelector('.person-provider-section');
+        if (providerSection) {
+            var providerCard = document.getElementById('person-provider-card');
+
+            // Debug logging
+            console.log('Rendering providers for:', person.name);
+            console.log('Provider count:', person.providerCount);
+            console.log('Is multi-provider:', isMultiProvider);
+            console.log('Providers data:', person.providers);
+
+            // CRITICAL: Clear the existing content first
+            providerCard.innerHTML = '';
+
+            if (isMultiProvider) {
+                // Build a list of all providers
+                var providersHTML = '<div class="multi-provider-list">';
+                person.providers.forEach(function (prov) {
+                    providersHTML += '<div class="multi-provider-item">' +
+                        '<div class="multi-provider-name">' + self.escapeHtml(prov.provider_name) + '</div>' +
+                        '<div class="multi-provider-stats">' +
+                        (prov.properties || 0) + ' properties · ' +
+                        self.formatNumber(prov.beds || 0) + ' beds' +
+                        '</div>' +
+                        '</div>';
+                });
+                providersHTML += '</div>';
+                providerSection.querySelector('h4').innerHTML = 'Providers <span class="provider-count-small">(' + person.providerCount + ')</span>';
+                providerCard.innerHTML = providersHTML;
+                console.log('Set multi-provider HTML');
+                providerCard.onclick = null; // Remove click handler for multi-provider
+                providerCard.style.cursor = 'default';
+            } else {
+                // Single provider - rebuild the structure
+                providerSection.querySelector('h4').textContent = 'Provider';
+                providerCard.innerHTML = '<div class="provider-card-name" id="person-provider-name">' +
+                    self.escapeHtml(person.providerName) +
+                    '</div><div class="provider-card-count" id="person-provider-count">' +
+                    person.propertyCount + ' properties' +
+                    '</div><svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" class="provider-card-arrow">' +
+                    '<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>' +
+                    '</svg>';
+                providerCard.onclick = function () { CRMApp.openProviderFromPerson(); };
+                providerCard.style.cursor = 'pointer';
+                console.log('Set single-provider content');
             }
         }
 
@@ -4068,12 +4084,12 @@ var CRMApp = {
 
         // Reset contact display
         if (phoneEl) {
-            phoneEl.textContent = person.phone || '••••••••••';
-            phoneEl.className = 'contact-value ' + (person.phone ? 'contact-found' : 'contact-blurred');
+            phoneEl.textContent = person.phone || 'No phone available';
+            phoneEl.className = 'contact-value ' + (person.phone ? 'contact-found' : 'contact-not-found');
         }
         if (emailEl) {
-            emailEl.textContent = person.email || '••••••••••••••';
-            emailEl.className = 'contact-value ' + (person.email ? 'contact-found' : 'contact-blurred');
+            emailEl.textContent = person.email || 'No email available';
+            phoneEl.className = 'contact-value ' + (person.email ? 'contact-found' : 'contact-not-found');
         }
 
         // Show/hide unlock button based on enrichment status

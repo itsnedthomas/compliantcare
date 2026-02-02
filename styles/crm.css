@@ -4614,8 +4614,8 @@ a.linkedin-direct:hover {
 
 /* Multi-provider list (for people who represent multiple providers) */
 .multi-provider-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
 }
 
