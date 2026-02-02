@@ -119,3 +119,34 @@ Found 1000 care homes to enrich in this batch
 Estimated time for batch: 1.7 minutes
 ------------------------------------------------------------
 [100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 0.9/sec | ETA: 16.5 min
+[200/1000] (20.0%) | Success: 200 | Failed: 0 | Rate: 0.9/sec | ETA: 14.8 min
+[300/1000] (30.0%) | Success: 300 | Failed: 0 | Rate: 0.9/sec | ETA: 12.8 min
+[400/1000] (40.0%) | Success: 400 | Failed: 0 | Rate: 0.9/sec | ETA: 10.7 min
+[500/1000] (50.0%) | Success: 500 | Failed: 0 | Rate: 1.0/sec | ETA: 8.7 min
+[600/1000] (60.0%) | Success: 600 | Failed: 0 | Rate: 1.0/sec | ETA: 7.0 min
+[700/1000] (70.0%) | Success: 700 | Failed: 0 | Rate: 0.9/sec | ETA: 5.3 min
+[800/1000] (80.0%) | Success: 800 | Failed: 0 | Rate: 1.0/sec | ETA: 3.5 min
+[900/1000] (90.0%) | Success: 900 | Failed: 0 | Rate: 1.0/sec | ETA: 1.7 min
+[1000/1000] (100.0%) | Success: 1000 | Failed: 0 | Rate: 1.0/sec | ETA: 0.0 min
+
+Batch 6 complete: 1000 success, 0 failed in 17.3 min
+Overall progress: 5989 enriched, 11 failed
+
+--- BATCH 7 ---
+Fetching care homes to enrich...
+Found 1000 care homes to enrich in this batch
+Estimated time for batch: 1.7 minutes
+------------------------------------------------------------
+[100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 0.9/sec | ETA: 15.8 min
+[200/1000] (20.0%) | Success: 200 | Failed: 0 | Rate: 0.9/sec | ETA: 14.0 min
+[300/1000] (30.0%) | Success: 300 | Failed: 0 | Rate: 1.0/sec | ETA: 12.1 min
+[400/1000] (40.0%) | Success: 400 | Failed: 0 | Rate: 1.0/sec | ETA: 10.3 min
+[500/1000] (50.0%) | Success: 500 | Failed: 0 | Rate: 0.9/sec | ETA: 8.8 min
+[600/1000] (60.0%) | Success: 600 | Failed: 0 | Rate: 1.0/sec | ETA: 7.0 min
+  Error: HTTPSConnectionPool(host='qdrbwvxqtgwjgitcambn.supabase.co', port=443): Max retries exceeded with url: /functions/v1/cqc-enrich-full (Caused by SSLError(SSLError(0, 'unknown error (_ssl.c:4293)')))
+[700/1000] (70.0%) | Success: 699 | Failed: 1 | Rate: 1.0/sec | ETA: 5.2 min
+[800/1000] (80.0%) | Success: 799 | Failed: 1 | Rate: 1.0/sec | ETA: 3.5 min
+/Users/nedthomas/Desktop/AFO/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+/Users/nedthomas/Desktop/AFO/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(

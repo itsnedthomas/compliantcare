@@ -3262,6 +3262,21 @@ body {
     background: #006396 !important;
 }
 
+/* Direct LinkedIn link (enriched) - more prominent */
+.btn-linkedin.linkedin-direct,
+a.linkedin-direct {
+    background: linear-gradient(135deg, #0077b5, #00a0dc) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px rgba(0, 119, 181, 0.3);
+}
+
+.btn-linkedin.linkedin-direct:hover,
+a.linkedin-direct:hover {
+    background: linear-gradient(135deg, #006396, #0088c7) !important;
+    box-shadow: 0 4px 12px rgba(0, 119, 181, 0.4);
+}
+
 .btn-enrich {
     background: rgba(255, 255, 255, 0.2) !important;
     color: white !important;
@@ -3866,9 +3881,9 @@ body {
 /* People Grid */
 .people-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
 /* People Card */
@@ -3876,7 +3891,7 @@ body {
     background: var(--bg-white);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 20px;
+    padding: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -3892,13 +3907,13 @@ body {
 .people-card-header {
     display: flex;
     align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .people-card-avatar {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--purple), #6366f1);
     color: white;
@@ -3906,7 +3921,7 @@ body {
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
     flex-shrink: 0;
 }
 
@@ -3916,21 +3931,22 @@ body {
 }
 
 .people-card-name {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-dark);
-    line-height: 1.3;
-    margin-bottom: 4px;
+    line-height: 1.25;
+    margin-bottom: 2px;
 }
 
 .people-card-provider {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
     display: -webkit-box;
     -webkit-line-clamp: 1;
     line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-bottom: 6px;
 }
 
 .people-card-meta {
@@ -3956,7 +3972,7 @@ body {
 
 .people-card-contact {
     margin-top: auto;
-    padding-top: 12px;
+    padding-top: 8px;
     border-top: 1px solid var(--border-light);
 }
 
@@ -4007,10 +4023,10 @@ body {
 
 .people-card-stats {
     display: flex;
-    gap: 16px;
-    padding: 12px 0;
+    gap: 14px;
+    padding: 8px 0;
     border-bottom: 1px solid var(--border-light);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .people-stat {
@@ -4020,23 +4036,23 @@ body {
 }
 
 .people-stat .stat-value {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-dark);
 }
 
 .people-stat .stat-label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .people-card-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .people-card-footer .badge {
@@ -4058,6 +4074,94 @@ body {
     background: var(--green-bg);
     padding: 2px 6px;
     border-radius: 8px;
+}
+
+/* Compact People Card Styles */
+.people-card.people-card-compact {
+    padding: 12px 14px;
+    position: relative;
+    /* Add this so badge can be absolutely positioned */
+}
+
+.people-card-compact .people-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.people-card-compact .people-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.people-card-compact .people-card-header .badge {
+    flex-shrink: 0;
+}
+
+.region-chip {
+    font-size: 10px;
+    color: var(--text-secondary);
+    background: var(--bg-main);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+/* Provider count badge - shows how many providers a person represents */
+.provider-count-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--purple);
+    background: rgba(139, 92, 246, 0.1);
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.provider-count-badge::before {
+    content: '⚡';
+    font-size: 11px;
+}
+
+.people-card-region-row {
+    margin-top: 6px;
+}
+
+.people-card-compact .people-card-provider {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.people-card-stats-inline {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.people-card-stats-inline span {
+    white-space: nowrap;
 }
 
 /* Beds filter dropdown */
@@ -4178,131 +4282,177 @@ body {
     color: var(--text-secondary);
 }
 
-/* Person Stats Section - Redesigned */
+/* Person Stats Section - Compact */
 .person-stats-section {
-    padding: 16px;
+    padding: 12px;
     background: var(--bg-main);
     border-radius: var(--radius);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.person-stats-redesigned .person-stat-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.person-stats-redesigned .person-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 12px;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    gap: 6px;
-}
-
-.person-stats-redesigned .stat-icon-wrapper {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: var(--purple-bg, rgba(139, 92, 246, 0.1));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--purple);
-    margin-bottom: 4px;
-}
-
-.person-stats-redesigned .person-stat:nth-child(1) .stat-icon-wrapper {
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-}
-
-.person-stats-redesigned .person-stat:nth-child(2) .stat-icon-wrapper {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.person-stats-redesigned .person-stat .stat-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-dark);
-    line-height: 1;
-}
-
-.person-stats-redesigned .person-stat .stat-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 2px;
-}
-
-.person-rating-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-}
-
-.person-rating-row .rating-label {
-    font-size: 13px;
-    color: var(--text-secondary);
-}
-
-/* Person Context Section - Most Recent Report */
-.person-context-section {
-    background: var(--bg-main);
-    border-radius: var(--radius);
-    padding: 16px;
-}
-
-.person-context-section h4 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: var(--text-dark);
-}
-
-.person-context-section h4 svg {
-    color: var(--purple);
-}
-
-.person-context-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.context-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.person-stats-compact .person-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
 }
 
-.context-label {
-    font-size: 13px;
+.person-stats-compact .person-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 6px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    gap: 4px;
+}
+
+.person-stats-compact .stat-icon-wrapper {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--purple-bg, rgba(139, 92, 246, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--purple);
+}
+
+.person-stats-compact .person-stat:nth-child(1) .stat-icon-wrapper {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.person-stats-compact .person-stat:nth-child(2) .stat-icon-wrapper {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.person-stats-compact .person-stat:nth-child(3) .stat-icon-wrapper {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.person-stats-compact .person-stat:nth-child(4) .stat-icon-wrapper {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.person-stats-compact .person-stat .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1;
+}
+
+.person-stats-compact .person-stat .stat-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.person-rating-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.person-rating-inline .rating-label {
+    font-size: 12px;
     color: var(--text-secondary);
 }
 
-.context-value {
+/* Person Report Section - Expandable */
+.person-report-section {
+    background: var(--bg-main);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.person-report-section .report-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.person-report-section .report-header:hover {
+    background: var(--bg-main);
+}
+
+.report-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 13px;
     font-weight: 500;
     color: var(--text-dark);
+}
+
+.report-header-left svg {
+    color: var(--purple);
+}
+
+.report-header-left .report-date {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+.report-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.report-header-right .chevron-icon {
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.person-report-section.expanded .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.badge-sm {
+    font-size: 10px;
+    padding: 2px 6px;
+}
+
+.report-details {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: var(--bg-card);
+}
+
+.report-summary {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.report-summary ul {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.report-summary li {
+    margin-bottom: 4px;
 }
 
 /* Contact pending state */
@@ -4460,6 +4610,44 @@ body {
 
 .provider-card-arrow {
     color: var(--text-muted);
+}
+
+/* Multi-provider list (for people who represent multiple providers) */
+.multi-provider-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.multi-provider-item {
+    padding: 12px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+}
+
+.multi-provider-item:hover {
+    background: var(--bg-main);
+    border-color: var(--purple);
+}
+
+.multi-provider-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.multi-provider-stats {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.provider-count-small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
 }
 
 /* People Mini Map */

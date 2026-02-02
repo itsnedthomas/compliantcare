@@ -34,7 +34,7 @@ def get_care_homes_to_enrich():
     
     # Call RPC function that handles the column name with ? properly
     url = f'{SUPABASE_URL}/rest/v1/rpc/get_unenriched_care_homes'
-    response = requests.post(url, headers=headers, json={'max_count': 15000})
+    response = requests.post(url, headers=headers, json={'max_count': 1000}, timeout=60)
     
     if response.status_code != 200:
         print(f"Error fetching care homes: {response.status_code} {response.text}")

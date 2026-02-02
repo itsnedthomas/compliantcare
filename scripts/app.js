@@ -27,7 +27,7 @@ var CRMApp = {
     peopleData: [],
     filteredPeople: [],
     peoplePage: 1,
-    peoplePerPage: 18,
+    peoplePerPage: 44,
     currentPersonForModal: null,
     peopleMiniMap: null,
 
@@ -2913,6 +2913,27 @@ var CRMApp = {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     },
 
+    // Format person name: remove titles (Mr, Mrs, Miss, Ms, Dr) and middle names
+    // Preserves double-barrelled surnames (with hyphens)
+    formatPersonName: function (name) {
+        if (!name) return 'Unknown';
+
+        // Remove common titles at the start
+        var cleaned = name.replace(/^(Mr\.?|Mrs\.?|Miss\.?|Ms\.?|Dr\.?)\s+/i, '').trim();
+
+        // Split into parts
+        var parts = cleaned.split(' ').filter(function (p) { return p.length > 0; });
+
+        if (parts.length === 0) return 'Unknown';
+        if (parts.length === 1) return parts[0];
+
+        // First name is parts[0], last name is the last part (may be double-barrelled)
+        var firstName = parts[0];
+        var lastName = parts[parts.length - 1];
+
+        return firstName + ' ' + lastName;
+    },
+
     getRatingClass: function (rating) {
         if (!rating) return 'unknown';
         var r = rating.toLowerCase().replace(/\s+/g, '-');
@@ -3454,65 +3475,82 @@ var CRMApp = {
             var newPeopleData = [];
 
             try {
-                // Fetch only nominated individuals from Supabase people table
-                var response = await fetch(
-                    SUPABASE_URL + '/rest/v1/people?select=*&role=eq.nominated_individual&order=total_beds.desc',
-                    {
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-                        }
-                    }
-                );
+                // Fetch from people_consolidated view (deduplicated, sorted by influence)
+                var allPeople = [];
+                var offset = 0;
+                var batchSize = 1000;
+                var hasMore = true;
 
-                if (!response.ok) {
-                    console.error('Failed to fetch people:', response.status);
-                    return;
+                while (hasMore) {
+                    var response = await fetch(
+                        SUPABASE_URL + '/rest/v1/people_consolidated?select=*&order=total_beds.desc.nullslast&limit=' + batchSize + '&offset=' + offset,
+                        {
+                            headers: {
+                                'apikey': SUPABASE_ANON_KEY,
+                                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                            }
+                        }
+                    );
+
+                    if (!response.ok) {
+                        console.error('Failed to fetch people at offset ' + offset + ':', response.status);
+                        break;
+                    }
+
+                    var batch = await response.json();
+                    allPeople = allPeople.concat(batch);
+                    console.log('Fetched consolidated people batch: ' + batch.length + ' (total: ' + allPeople.length + ')');
+
+                    if (batch.length < batchSize) {
+                        hasMore = false;
+                    } else {
+                        offset += batchSize;
+                    }
                 }
 
-                var people = await response.json();
+                var people = allPeople;
 
                 // Map region codes to names
                 var regionMap = {
-                    '0': 'East Midlands',
-                    '1': 'East of England',
-                    '2': 'London',
-                    '3': 'North East',
-                    '4': 'North West',
-                    'Y': 'Yorkshire & Humber',
-                    '5': 'South East',
-                    '6': 'South West',
-                    '7': 'West Midlands',
-                    '8': 'Yorkshire and The Humber'
+                    '0': 'East of England',
+                    '1': 'Yorkshire & The Humber',
+                    '2': 'North West',
+                    '3': 'South East',
+                    '4': 'London',
+                    '5': 'South West',
+                    '6': 'West Midlands',
+                    '7': 'East Midlands',
+                    '8': 'North East',
+                    '9': 'Other'
                 };
 
-                // Deduplicate by person name - keep only one entry per unique person (with highest beds)
-                // Since results are ordered by total_beds.desc, first occurrence has highest beds
-                var seenPeople = {};
-
+                // Process consolidated people - each represents a unique individual
+                // with aggregated data across all their providers
                 people.forEach(function (p) {
-                    // Aggressive normalization: lowercase, remove all non-alphanumeric, collapse spaces
-                    var normalizedName = (p.name || '')
-                        .toLowerCase()
-                        .replace(/[^a-z0-9\s]/g, '')  // Remove non-alphanumeric except spaces
-                        .replace(/\s+/g, ' ')          // Collapse multiple spaces
-                        .trim();
+                    var providers = p.providers || [];
 
-                    // Skip if we already have this person
-                    if (seenPeople[normalizedName]) {
-                        return;
-                    }
-                    seenPeople[normalizedName] = true;
+                    // Get primary provider (the one with most beds)
+                    var primaryProvider = providers[0] || {};
 
                     newPeopleData.push({
                         id: p.id,
                         name: p.name || 'Unknown',
                         role: p.role,
                         roleLabel: 'Nominated Individual',
-                        providerName: p.provider_name || 'Unknown Provider',
-                        providerId: p.provider_id,
+
+                        // Primary provider info (for card display)
+                        providerName: primaryProvider.provider_name || 'Unknown Provider',
+                        providerId: primaryProvider.provider_id,
+
+                        // Multi-provider data
+                        providers: providers,
+                        providerCount: p.provider_count || 1,
+
+                        // Aggregated influence metrics
                         totalBeds: p.total_beds || 0,
                         propertyCount: p.total_properties || 0,
+
+                        // Other fields
                         region: regionMap[p.region] || p.region || 'Unknown',
                         yearsAtProvider: p.years_at_provider || 0,
                         lastReportRating: p.last_report_rating || 'Unknown',
@@ -3525,12 +3563,11 @@ var CRMApp = {
                         contactedAt: p.contacted_at,
                         notes: p.notes
                     });
-
                 });
 
                 // Assign all at once (atomic operation)
                 self.peopleData = newPeopleData;
-                console.log('Loaded ' + self.peopleData.length + ' unique people from Supabase');
+                console.log('Loaded ' + self.peopleData.length + ' unique people (consolidated from ' + people.reduce(function (sum, p) { return sum + (p.provider_count || 0); }, 0) + ' provider relationships)');
             } catch (error) {
                 console.error('Error fetching people:', error);
             } finally {
@@ -3594,7 +3631,12 @@ var CRMApp = {
         var searchInput = document.getElementById('people-search');
         var regionFilter = document.getElementById('people-region-filter');
         var bedsFilter = document.getElementById('people-beds-filter');
+        var ratingsFilter = document.getElementById('people-ratings-filter');
         var outreachFilter = document.getElementById('people-outreach-filter');
+
+        // Prevent duplicate event listeners by checking if already initialized
+        if (this._peopleSearchInitialized) return;
+        this._peopleSearchInitialized = true;
 
         if (searchInput) {
             searchInput.addEventListener('input', function () {
@@ -3640,6 +3682,36 @@ var CRMApp = {
             });
         }
 
+        // Multi-select ratings filter setup
+        if (ratingsFilter) {
+            var trigger = ratingsFilter.querySelector('.multi-select-trigger');
+            var checkboxes = ratingsFilter.querySelectorAll('input[type="checkbox"]');
+
+            // Toggle dropdown on trigger click
+            if (trigger) {
+                trigger.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    ratingsFilter.classList.toggle('open');
+                });
+            }
+
+            // Handle checkbox changes
+            checkboxes.forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    self.updatePeopleRatingsLabel(ratingsFilter);
+                    self.peoplePage = 1;
+                    self.filterPeople();
+                });
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                if (!ratingsFilter.contains(e.target)) {
+                    ratingsFilter.classList.remove('open');
+                }
+            });
+        }
+
         if (outreachFilter) {
             outreachFilter.addEventListener('change', function () {
                 self.peoplePage = 1;
@@ -3661,6 +3733,19 @@ var CRMApp = {
         }
     },
 
+    updatePeopleRatingsLabel: function (dropdown) {
+        var label = dropdown.querySelector('.multi-select-label');
+        var checkboxes = dropdown.querySelectorAll('input[type="checkbox"]:checked');
+
+        if (checkboxes.length === 0) {
+            label.textContent = 'All Ratings';
+        } else if (checkboxes.length === 1) {
+            label.textContent = checkboxes[0].parentNode.textContent.trim();
+        } else {
+            label.textContent = checkboxes.length + ' ratings selected';
+        }
+    },
+
     filterPeople: function () {
         var self = this;
         var searchQuery = document.getElementById('people-search')?.value?.toLowerCase() || '';
@@ -3677,12 +3762,31 @@ var CRMApp = {
             });
         }
 
+        // Get selected ratings from multi-select
+        var ratingsFilterEl = document.getElementById('people-ratings-filter');
+        var selectedRatings = [];
+        if (ratingsFilterEl) {
+            var checkboxes = ratingsFilterEl.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(function (cb) {
+                selectedRatings.push(cb.value);
+            });
+        }
+
         this.filteredPeople = this.peopleData.filter(function (person) {
             // Search filter
             if (searchQuery) {
                 var nameMatch = person.name.toLowerCase().indexOf(searchQuery) > -1;
                 var providerMatch = person.providerName.toLowerCase().indexOf(searchQuery) > -1;
                 if (!nameMatch && !providerMatch) return false;
+            }
+
+
+
+            // Ratings filter (multi-select)
+            if (selectedRatings.length > 0) {
+                if (selectedRatings.indexOf(person.lastReportRating) === -1) {
+                    return false;
+                }
             }
 
             // Region filter
@@ -3694,10 +3798,21 @@ var CRMApp = {
             if (selectedBedRanges.length > 0) {
                 var beds = person.totalBeds || 0;
                 var matchesRange = selectedBedRanges.some(function (range) {
-                    if (range === '1-50') return beds >= 1 && beds <= 50;
-                    if (range === '51-200') return beds >= 51 && beds <= 200;
+                    if (range === 'Unknown') return !beds || beds <= 0;
+                    if (range === '1-2') return beds >= 1 && beds <= 2;
+                    if (range === '3-5') return beds >= 3 && beds <= 5;
+                    if (range === '6-10') return beds >= 6 && beds <= 10;
+                    if (range === '11-15') return beds >= 11 && beds <= 15;
+                    if (range === '16-20') return beds >= 16 && beds <= 20;
+                    if (range === '21-30') return beds >= 21 && beds <= 30;
+                    if (range === '31-40') return beds >= 31 && beds <= 40;
+                    if (range === '41-50') return beds >= 41 && beds <= 50;
+                    if (range === '51-100') return beds >= 51 && beds <= 100;
+                    if (range === '101-200') return beds >= 101 && beds <= 200;
                     if (range === '201-500') return beds >= 201 && beds <= 500;
-                    if (range === '500+') return beds > 500;
+                    if (range === '501-1000') return beds >= 501 && beds <= 1000;
+                    if (range === '1001-5000') return beds >= 1001 && beds <= 5000;
+                    if (range === '5000+') return beds > 5000;
                     return false;
                 });
                 if (!matchesRange) return false;
@@ -3727,7 +3842,11 @@ var CRMApp = {
         // Update subtitle
         var subtitleEl = document.getElementById('people-subtitle');
         if (subtitleEl) {
-            subtitleEl.textContent = this.formatNumber(this.filteredPeople.length) + ' decision makers';
+            var totalProps = this.filteredPeople.reduce(function (sum, p) { return sum + (p.propertyCount || 0); }, 0);
+            var totalBeds = this.filteredPeople.reduce(function (sum, p) { return sum + (p.totalBeds || 0); }, 0);
+            subtitleEl.textContent = this.formatNumber(this.filteredPeople.length) + ' decision makers • ' +
+                this.formatNumber(totalProps) + ' properties • ' +
+                this.formatNumber(totalBeds) + ' beds';
         }
 
         this.renderPeopleCards();
@@ -3739,6 +3858,21 @@ var CRMApp = {
         if (!container) return;
 
         var self = this;
+
+        // Calculate dynamic cards per page to fill complete rows
+        var gridWidth = container.offsetWidth;
+        var cardMinWidth = 280; // matches CSS min-width
+        var gridGap = 20; // matches CSS gap
+        var columnsPerRow = Math.max(1, Math.floor((gridWidth + gridGap) / (cardMinWidth + gridGap)));
+
+        // Calculate how many rows fit (estimate card height ~110px + gap)
+        var cardHeight = 110;
+        var viewportHeight = window.innerHeight - 200; // account for header/pagination
+        var rowsPerPage = Math.max(1, Math.floor((viewportHeight + gridGap) / (cardHeight + gridGap)));
+
+        // Set cards per page to fill complete rows
+        this.peoplePerPage = columnsPerRow * rowsPerPage;
+
         var start = (this.peoplePage - 1) * this.peoplePerPage;
         var end = start + this.peoplePerPage;
         var pagePeople = this.filteredPeople.slice(start, end);
@@ -3751,45 +3885,35 @@ var CRMApp = {
 
         var html = '';
         pagePeople.forEach(function (person) {
-            var initials = self.getInitials(person.name);
+            var displayName = self.formatPersonName(person.name);
             var regionLabel = person.region || 'Unknown';
             var bedsFormatted = self.formatNumber(person.totalBeds);
-            var roleClass = person.role === 'nominated_individual' ? 'role-ni' : 'role-rm';
             var ratingClass = self.getRatingClass(person.lastReportRating);
+            var ratingLabel = person.lastReportRating || 'Unknown';
             var yearsLabel = person.yearsAtProvider > 0 ? Math.round(person.yearsAtProvider) + ' yrs' : '';
             var contactedClass = person.contacted ? 'contacted' : '';
 
-            html += '<div class="people-card ' + contactedClass + '" onclick="CRMApp.showPersonDetail(\'' + person.id + '\')">' +
+            // Multi-provider indicators
+            var isMultiProvider = person.providerCount > 1;
+            var providerCountBadge = isMultiProvider ?
+                '<span class="provider-count-badge">' + person.providerCount + ' Providers</span>' : '';
+            var primaryProviderLabel = isMultiProvider ?
+                person.providerName + ' +' + (person.providerCount - 1) + ' more' :
+                person.providerName;
+
+            html += '<div class="people-card people-card-compact ' + contactedClass + '" onclick="CRMApp.showPersonDetail(\'' + person.id + '\')">' +
                 '<div class="people-card-header">' +
-                '<div class="people-card-avatar">' + initials + '</div>' +
-                '<div class="people-card-info">' +
-                '<div class="people-card-name">' + self.escapeHtml(person.name) + '</div>' +
-                '<span class="people-role-badge ' + roleClass + '">' + person.roleLabel + '</span>' +
+                '<div class="people-card-name">' + self.escapeHtml(displayName) + '</div>' +
+                '<span class="badge badge-sm ' + ratingClass + '">' + ratingLabel + '</span>' +
                 '</div>' +
+                '<div class="people-card-provider">' + self.escapeHtml(primaryProviderLabel) + '</div>' +
+                '<div class="people-card-stats-inline">' +
+                '<span>' + bedsFormatted + ' beds</span>' +
+                '<span>' + person.propertyCount + ' properties</span>' +
+                (yearsLabel ? '<span>' + yearsLabel + '</span>' : '') +
                 '</div>' +
-                '<div class="people-card-provider">' + self.escapeHtml(person.providerName) + '</div>' +
-                '<div class="people-card-stats">' +
-                '<div class="people-stat">' +
-                '<span class="stat-value">' + bedsFormatted + '</span>' +
-                '<span class="stat-label">beds</span>' +
-                '</div>' +
-                '<div class="people-stat">' +
-                '<span class="stat-value">' + person.propertyCount + '</span>' +
-                '<span class="stat-label">properties</span>' +
-                '</div>' +
-                (yearsLabel ? '<div class="people-stat"><span class="stat-value">' + yearsLabel + '</span><span class="stat-label">tenure</span></div>' : '') +
-                '</div>' +
-                '<div class="people-card-footer">' +
-                '<span class="people-card-region">' + regionLabel + '</span>' +
-                '<span class="badge ' + ratingClass + '">' + (person.lastReportRating || 'Unknown') + '</span>' +
-                '</div>' +
-                '<div class="people-card-contact">' +
-                '<div class="contact-preview ' + (person.isEnriched ? 'unlocked' : 'locked') + '">' +
-                (person.isEnriched ?
-                    '<span class="contact-found">✓ Contact info</span>' :
-                    '<span class="contact-locked"><svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg> Unlock contact</span>') +
-                '</div>' +
-                '</div>' +
+                '<div class="people-card-region-row"><span class="region-chip">' + regionLabel + '</span></div>' +
+                providerCountBadge +
                 '</div>';
         });
 
@@ -3835,10 +3959,51 @@ var CRMApp = {
         var unlockBtn = document.getElementById('person-unlock-btn');
 
         if (nameEl) nameEl.textContent = person.name;
-        if (providerEl) providerEl.textContent = person.providerName;
+
+        // Handle multi-provider display
+        var isMultiProvider = person.providerCount > 1;
+        if (providerEl) {
+            if (isMultiProvider) {
+                providerEl.innerHTML = '<span style="color: var(--purple)">⚡ ' + person.providerCount + ' Providers</span>';
+            } else {
+                providerEl.textContent = person.providerName;
+            }
+        }
+
         if (countEl) countEl.textContent = this.formatNumber(person.propertyCount) + ' properties';
-        if (providerNameEl) providerNameEl.textContent = person.providerName;
-        if (providerCountEl) providerCountEl.textContent = person.propertyCount + ' properties';
+
+        // Provider section - show all providers or single provider
+        if (providerNameEl && providerCountEl) {
+            var providerSection = document.querySelector('.person-provider-section');
+            if (providerSection) {
+                var providerCard = document.getElementById('person-provider-card');
+                if (isMultiProvider) {
+                    // Build a list of all providers
+                    var providersHTML = '<div class="multi-provider-list">';
+                    person.providers.forEach(function (prov) {
+                        providersHTML += '<div class="multi-provider-item">' +
+                            '<div class="multi-provider-name">' + self.escapeHtml(prov.provider_name) + '</div>' +
+                            '<div class="multi-provider-stats">' +
+                            prov.total_properties + ' properties · ' +
+                            self.formatNumber(prov.total_beds) + ' beds' +
+                            '</div>' +
+                            '</div>';
+                    });
+                    providersHTML += '</div>';
+                    providerSection.querySelector('h4').innerHTML = 'Providers <span class="provider-count-small">(' + person.providerCount + ')</span>';
+                    providerCard.innerHTML = providersHTML;
+                    providerCard.onclick = null; // Remove click handler for multi-provider
+                    providerCard.style.cursor = 'default';
+                } else {
+                    // Single provider - keep existing behavior
+                    providerSection.querySelector('h4').textContent = 'Provider';
+                    providerNameEl.textContent = person.providerName;
+                    providerCountEl.textContent = person.propertyCount + ' properties';
+                    providerCard.onclick = function () { CRMApp.openProviderFromPerson(); };
+                    providerCard.style.cursor = 'pointer';
+                }
+            }
+        }
 
         // Populate stats section
         var totalBedsEl = document.getElementById('person-total-beds');
@@ -3935,6 +4100,53 @@ var CRMApp = {
         this.fetchProviderFacilitiesForMap(person).then(function (facilities) {
             person.providerFacilities = facilities;
             self.renderPeopleMiniMap(person);
+
+            // Calculate the ACTUAL most recent report from all facilities
+            if (facilities && facilities.length > 0) {
+                var mostRecentDate = null;
+                var mostRecentRating = null;
+
+                facilities.forEach(function (f) {
+                    var pubDate = f['Publication Date'];
+                    if (pubDate) {
+                        // Parse DD/MM/YYYY format from database
+                        var date;
+                        if (typeof pubDate === 'string' && pubDate.includes('/')) {
+                            var parts = pubDate.split('/');
+                            date = new Date(parts[2], parts[1] - 1, parts[0]);
+                        } else {
+                            date = new Date(pubDate);
+                        }
+
+                        if (!isNaN(date.getTime()) && (!mostRecentDate || date > mostRecentDate)) {
+                            mostRecentDate = date;
+                            mostRecentRating = f['Latest Rating'];
+                        }
+                    }
+                });
+
+                // Update the UI with the actual most recent report
+                if (mostRecentDate) {
+                    var lastInspectionEl = document.getElementById('person-last-inspection');
+                    var contextRatingEl = document.getElementById('person-context-rating');
+
+                    if (lastInspectionEl) {
+                        lastInspectionEl.textContent = mostRecentDate.toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                        });
+                    }
+                    if (contextRatingEl && mostRecentRating) {
+                        contextRatingEl.textContent = mostRecentRating;
+                        contextRatingEl.className = 'badge badge-sm ' + self.getRatingClass(mostRecentRating);
+                    }
+
+                    // Store for use in expandable section
+                    person.actualMostRecentDate = mostRecentDate;
+                    person.actualMostRecentRating = mostRecentRating;
+                }
+            }
         });
     },
 
@@ -3943,8 +4155,9 @@ var CRMApp = {
         if (!providerId) return [];
 
         try {
+            // Column names with spaces must be quoted in PostgREST
             var response = await fetch(
-                SUPABASE_URL + '/rest/v1/facilities?select=name,overallRating,latitude,longitude&Provider%20ID=eq.' + encodeURIComponent(providerId),
+                SUPABASE_URL + '/rest/v1/facilities?select=%22Location%20Name%22,%22Latest%20Rating%22,%22Publication%20Date%22,latitude,longitude&%22Provider%20ID%22=eq.' + encodeURIComponent(providerId),
                 {
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -3954,7 +4167,7 @@ var CRMApp = {
             );
 
             if (!response.ok) {
-                console.error('Failed to fetch facilities for provider');
+                console.error('Failed to fetch facilities for provider:', response.status);
                 return [];
             }
 
@@ -4162,7 +4375,10 @@ var CRMApp = {
 
             if (!lat || !lng) return;
 
-            var color = colors[f.overallRating] || '#8c8c8c';
+            // Use the correct column names with spaces
+            var rating = f['Latest Rating'];
+            var name = f['Location Name'];
+            var color = colors[rating] || '#8c8c8c';
 
             var icon = L.divIcon({
                 html: '<div style="width:12px;height:12px;background:' + color + ';border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>',
@@ -4172,7 +4388,7 @@ var CRMApp = {
             });
 
             var marker = L.marker([lat, lng], { icon: icon }).addTo(self.peopleMiniMap);
-            marker.bindPopup('<div class="popup-title">' + self.escapeHtml(f.name) + '</div><div class="popup-meta">' + (f.overallRating || 'Not Rated') + '</div>');
+            marker.bindPopup('<div class="popup-title">' + self.escapeHtml(name || 'Unknown') + '</div><div class="popup-meta">' + (rating || 'Not Rated') + '</div>');
 
             bounds.push([lat, lng]);
         });
@@ -4200,6 +4416,44 @@ var CRMApp = {
         this.showProviderDetail(providerId);
     },
 
+    toggleReportDetails: function () {
+        var section = document.getElementById('person-report-section');
+        var details = document.getElementById('report-details');
+        var summary = document.getElementById('report-summary');
+
+        if (!section || !details) return;
+
+        var isExpanded = section.classList.contains('expanded');
+
+        if (isExpanded) {
+            section.classList.remove('expanded');
+            details.style.display = 'none';
+        } else {
+            section.classList.add('expanded');
+            details.style.display = 'block';
+
+            // Populate report summary if we have person data
+            if (this.currentPersonForModal && summary) {
+                var person = this.currentPersonForModal;
+                var html = '<ul>';
+
+                // Use actual most recent data if available
+                var rating = person.actualMostRecentRating || person.lastReportRating || 'Unknown';
+                html += '<li><strong>Overall Rating:</strong> ' + rating + '</li>';
+
+                var inspDate = person.actualMostRecentDate || (person.lastInspectionDate ? new Date(person.lastInspectionDate) : null);
+                if (inspDate) {
+                    html += '<li><strong>Publication Date:</strong> ' + inspDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) + '</li>';
+                }
+
+                html += '<li><strong>Properties Managed:</strong> ' + (person.propertyCount || 0) + '</li>';
+                html += '<li><strong>Total Beds:</strong> ' + this.formatNumber(person.totalBeds || 0) + '</li>';
+                html += '</ul>';
+                summary.innerHTML = html;
+            }
+        }
+    },
+
     closePersonDetail: function () {
         var modal = document.getElementById('people-detail-modal');
         if (modal) modal.classList.remove('active');
@@ -4212,10 +4466,27 @@ var CRMApp = {
             this.peopleMiniMap.remove();
             this.peopleMiniMap = null;
         }
+
+        // Reset report section
+        var reportSection = document.getElementById('person-report-section');
+        var reportDetails = document.getElementById('report-details');
+        if (reportSection) reportSection.classList.remove('expanded');
+        if (reportDetails) reportDetails.style.display = 'none';
     }
 };
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function () {
     CRMApp.init();
+
+    // Re-render people cards on window resize (debounced)
+    var resizeTimeout;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function () {
+            if (CRMApp.currentView === 'people') {
+                CRMApp.renderPeopleCards();
+            }
+        }, 250);
+    });
 });
