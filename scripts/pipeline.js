@@ -11,9 +11,11 @@ const PipelineView = {
     stages: [],
     isLoading: false,
     hasError: false,
+    refreshInterval: null,
+    REFRESH_INTERVAL_MS: 30000, // Auto-refresh every 30 seconds
 
-    // API endpoint for the Python backend (placeholder - will be Edge Function)
-    API_BASE: '/api/ghl',
+    // API endpoint for the Python backend proxy server
+    API_BASE: 'http://localhost:8081/api',
 
     /**
      * Initialize the pipeline view
@@ -39,27 +41,33 @@ const PipelineView = {
     async onViewActivate() {
         console.log('[PipelineView] View activated');
 
+        // Stop any existing refresh interval
+        this.stopAutoRefresh();
+
         // Show loading state
         this.showLoading(true);
         this.showError(false);
 
         try {
-            // For now, show a message that API key is needed
-            // Once the API key is configured, this will fetch real data
-            const mockPipelines = await this.fetchPipelines();
+            // Fetch live data from GHL API
+            const pipelines = await this.fetchPipelines();
+            console.log('[PipelineView] Received pipelines:', pipelines);
 
-            if (!mockPipelines || mockPipelines.length === 0) {
+            if (!pipelines || pipelines.length === 0) {
                 this.showError(true, 'No pipelines found. Please check your GoHighLevel API key configuration.');
                 return;
             }
 
-            this.pipelines = mockPipelines;
+            this.pipelines = pipelines;
             this.populatePipelineSelector();
 
             // Select first pipeline by default
             if (this.pipelines.length > 0) {
                 await this.selectPipeline(this.pipelines[0].id);
             }
+
+            // Start auto-refresh to keep in sync with GHL
+            this.startAutoRefresh();
         } catch (error) {
             console.error('[PipelineView] Error loading pipelines:', error);
             this.showError(true, error.message);
@@ -69,18 +77,86 @@ const PipelineView = {
     },
 
     /**
+     * Start auto-refresh polling to keep stages in sync with GHL
+     */
+    startAutoRefresh() {
+        this.stopAutoRefresh(); // Clear any existing interval
+        console.log(`[PipelineView] Starting auto-refresh every ${this.REFRESH_INTERVAL_MS / 1000}s`);
+        this.refreshInterval = setInterval(() => {
+            this.silentRefresh();
+        }, this.REFRESH_INTERVAL_MS);
+    },
+
+    /**
+     * Stop auto-refresh polling
+     */
+    stopAutoRefresh() {
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
+    },
+
+    /**
+     * Silently refresh pipeline data without showing loading states
+     */
+    async silentRefresh() {
+        console.log('[PipelineView] Silent refresh...');
+        try {
+            const pipelines = await this.fetchPipelines();
+            if (pipelines && pipelines.length > 0) {
+                this.pipelines = pipelines;
+
+                // Refresh current pipeline if it still exists
+                if (this.currentPipeline) {
+                    const updated = pipelines.find(p => p.id === this.currentPipeline.id);
+                    if (updated) {
+                        this.currentPipeline = updated;
+                        this.stages = updated.stages || [];
+
+                        // Refresh opportunities and re-render
+                        this.opportunities = await this.fetchOpportunities(this.currentPipeline.id);
+                        this.renderBoard();
+                        console.log('[PipelineView] Board refreshed with', this.stages.length, 'stages');
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('[PipelineView] Silent refresh failed:', error.message);
+        }
+    },
+
+    /**
      * Fetch pipelines from the backend
      */
     async fetchPipelines() {
-        // TODO: Replace with actual API call to Python backend
-        // For now, return demo data to show the UI
-        console.log('[PipelineView] Fetching pipelines (demo mode)...');
+        console.log('[PipelineView] Fetching pipelines from API...');
 
-        // Demo data - will be replaced with actual API call
-        return [
-            {
+        try {
+            const response = await fetch(`${this.API_BASE}/pipelines`);
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const pipelines = data.pipelines || [];
+
+            // Transform GHL pipeline format to our format
+            return pipelines.map(p => ({
+                id: p.id,
+                name: p.name,
+                stages: (p.stages || []).map((s, idx) => ({
+                    id: s.id,
+                    name: s.name,
+                    position: idx
+                }))
+            }));
+        } catch (error) {
+            console.warn('[PipelineView] API unavailable, using demo data:', error.message);
+            // Fallback to demo data if API unavailable
+            return [{
                 id: 'demo-pipeline-1',
-                name: 'Sales Pipeline',
+                name: 'Demo Pipeline',
                 stages: [
                     { id: 'stage-1', name: 'New Lead', position: 0 },
                     { id: 'stage-2', name: 'Contacted', position: 1 },
@@ -88,8 +164,8 @@ const PipelineView = {
                     { id: 'stage-4', name: 'Proposal Sent', position: 3 },
                     { id: 'stage-5', name: 'Won', position: 4 }
                 ]
-            }
-        ];
+            }];
+        }
     },
 
     /**
@@ -98,13 +174,28 @@ const PipelineView = {
     async fetchOpportunities(pipelineId) {
         console.log(`[PipelineView] Fetching opportunities for pipeline: ${pipelineId}`);
 
-        // Demo data - will be replaced with actual API call
-        return [
-            { id: 'opp-1', name: 'Sunrise Care Home', stageId: 'stage-1', value: 50000, status: 'open' },
-            { id: 'opp-2', name: 'Meadowview Residence', stageId: 'stage-2', value: 75000, status: 'open' },
-            { id: 'opp-3', name: 'Oak Lodge Care', stageId: 'stage-3', value: 120000, status: 'open' },
-            { id: 'opp-4', name: 'Harmony House', stageId: 'stage-1', value: 45000, status: 'open' }
-        ];
+        try {
+            const response = await fetch(`${this.API_BASE}/opportunities?pipelineId=${pipelineId}`);
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const opportunities = data.opportunities || [];
+
+            // Transform GHL opportunity format to our format
+            return opportunities.map(o => ({
+                id: o.id,
+                name: o.name || o.contactName || 'Unnamed',
+                stageId: o.pipelineStageId,
+                value: o.monetaryValue || 0,
+                status: o.status || 'open'
+            }));
+        } catch (error) {
+            console.warn('[PipelineView] API unavailable, using demo data:', error.message);
+            // Return empty array - no demo opportunities
+            return [];
+        }
     },
 
     /**
@@ -134,6 +225,7 @@ const PipelineView = {
         try {
             this.opportunities = await this.fetchOpportunities(pipelineId);
             this.renderBoard();
+            this.updateOpportunityCount(); // Update sidebar badge
         } catch (error) {
             console.error('[PipelineView] Error loading opportunities:', error);
             this.showError(true, error.message);
@@ -277,7 +369,7 @@ const PipelineView = {
      * Sync pipeline data from GHL
      */
     async syncPipeline() {
-        console.log('[PipelineView] Syncing pipeline...');
+        console.log('[PipelineView] Syncing pipeline (full refresh)...');
 
         const syncBtn = document.getElementById('sync-pipeline-btn');
         if (syncBtn) {
@@ -292,10 +384,34 @@ const PipelineView = {
         }
 
         try {
-            // Re-fetch data
-            if (this.currentPipeline) {
-                this.opportunities = await this.fetchOpportunities(this.currentPipeline.id);
+            // Full refresh: re-fetch pipelines, stages, and opportunities from GHL
+            const pipelines = await this.fetchPipelines();
+            console.log('[PipelineView] Sync fetched pipelines:', pipelines);
+
+            if (pipelines && pipelines.length > 0) {
+                this.pipelines = pipelines;
+                this.populatePipelineSelector();
+
+                // Refresh current pipeline's stages
+                if (this.currentPipeline) {
+                    const updated = pipelines.find(p => p.id === this.currentPipeline.id);
+                    if (updated) {
+                        this.currentPipeline = updated;
+                        this.stages = updated.stages || [];
+                        console.log('[PipelineView] Updated stages:', this.stages.length);
+                    }
+                }
+
+                // Refresh opportunities
+                if (this.currentPipeline) {
+                    this.opportunities = await this.fetchOpportunities(this.currentPipeline.id);
+                }
+
+                // Re-render the board
                 this.renderBoard();
+
+                // Update the sidebar badge
+                this.updateOpportunityCount();
             }
         } catch (error) {
             console.error('[PipelineView] Sync error:', error);
@@ -309,6 +425,16 @@ const PipelineView = {
                     Sync
                 `;
             }
+        }
+    },
+
+    /**
+     * Update opportunity count in sidebar badge
+     */
+    updateOpportunityCount() {
+        const countEl = document.getElementById('pipeline-count');
+        if (countEl) {
+            countEl.textContent = this.opportunities.length;
         }
     },
 

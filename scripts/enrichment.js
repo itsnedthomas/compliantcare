@@ -42,20 +42,26 @@ var EnrichmentStatus = {
         }
 
         try {
-            // Fetch enriched count
+            // Fetch enriched count using RPC function (handles column names with special chars)
             const countResponse = await fetch(
-                `${SUPABASE_URL}/rest/v1/facilities?select=cqc_last_synced&cqc_last_synced=not.is.null`,
+                `${SUPABASE_URL}/rest/v1/rpc/get_enrichment_count`,
                 {
+                    method: 'POST',
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: '{}'
                 }
             );
 
             if (countResponse.ok) {
                 const data = await countResponse.json();
-                this.enrichedCount = data.length;
+                if (data && data.length > 0) {
+                    this.enrichedCount = data[0].enriched_count || 0;
+                    this.totalCareHomes = data[0].total_care_homes || 13726;
+                }
             }
 
             // Fetch recently enriched care homes

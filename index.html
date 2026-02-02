@@ -89,6 +89,7 @@
                             d="M3 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM8 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1H9a1 1 0 01-1-1V4zM14 3a1 1 0 00-1 1v12a1 1 0 001 1h2a1 1 0 001-1V4a1 1 0 00-1-1h-2z" />
                     </svg>
                     Pipeline
+                    <span class="nav-badge" id="pipeline-count">0</span>
                 </a>
                 <a href="#" class="nav-link" data-view="enrichment">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -473,8 +474,21 @@
                         <select id="people-region-filter" class="provider-filter-select">
                             <option value="">All Regions</option>
                         </select>
+                        <select id="people-beds-filter" class="provider-filter-select">
+                            <option value="">All Sizes</option>
+                            <option value="0-50">1-50 beds</option>
+                            <option value="51-200">51-200 beds</option>
+                            <option value="201-500">201-500 beds</option>
+                            <option value="501+">500+ beds</option>
+                        </select>
+                        <select id="people-outreach-filter" class="provider-filter-select">
+                            <option value="">All Status</option>
+                            <option value="not-contacted">Not Contacted</option>
+                            <option value="contacted">Contacted</option>
+                        </select>
                     </div>
                 </header>
+
 
                 <div class="people-grid" id="people-grid"></div>
 
@@ -781,7 +795,35 @@
                         <!-- Person Info Section -->
                         <div class="person-info-section">
                             <div class="person-avatar-large" id="person-avatar">??</div>
-                            <div class="person-role">Decision Maker</div>
+                            <div class="person-role" id="person-role">Decision Maker</div>
+                        </div>
+
+                        <!-- Person Stats Section -->
+                        <div class="person-stats-section" id="person-stats-section">
+                            <div class="person-stat-row">
+                                <div class="person-stat">
+                                    <span class="stat-value" id="person-total-beds">0</span>
+                                    <span class="stat-label">Total Beds</span>
+                                </div>
+                                <div class="person-stat">
+                                    <span class="stat-value" id="person-total-properties">0</span>
+                                    <span class="stat-label">Properties</span>
+                                </div>
+                            </div>
+                            <div class="person-stat-row">
+                                <div class="person-stat">
+                                    <span class="stat-value" id="person-avg-beds">0</span>
+                                    <span class="stat-label">Avg Beds/Property</span>
+                                </div>
+                                <div class="person-stat">
+                                    <span class="stat-value" id="person-tenure">—</span>
+                                    <span class="stat-label">Tenure</span>
+                                </div>
+                            </div>
+                            <div class="person-rating-row" id="person-rating-row">
+                                <span class="rating-label">Portfolio Rating:</span>
+                                <span class="badge" id="person-rating-badge">Unknown</span>
+                            </div>
                         </div>
 
                         <!-- Contact Details Section -->

@@ -67,10 +67,38 @@ var DataHandler = {
         inadequate: 257
     },
 
-    // Cache configuration
-    CACHE_KEY: 'compliantcare_facilities_cache',
-    CACHE_TIMESTAMP_KEY: 'compliantcare_cache_timestamp',
+    // IndexedDB cache configuration
+    DB_NAME: 'CompliantCareCRM',
+    DB_VERSION: 1,
+    STORE_NAME: 'facilities_cache',
     CACHE_MAX_AGE_MS: 60 * 60 * 1000, // 1 hour cache validity
+    _db: null,
+
+    // Initialize IndexedDB
+    initDB: function () {
+        var self = this;
+        return new Promise(function (resolve, reject) {
+            if (self._db) {
+                resolve(self._db);
+                return;
+            }
+            var request = indexedDB.open(self.DB_NAME, self.DB_VERSION);
+            request.onerror = function () {
+                console.warn('IndexedDB open failed');
+                reject(request.error);
+            };
+            request.onsuccess = function () {
+                self._db = request.result;
+                resolve(self._db);
+            };
+            request.onupgradeneeded = function (event) {
+                var db = event.target.result;
+                if (!db.objectStoreNames.contains(self.STORE_NAME)) {
+                    db.createObjectStore(self.STORE_NAME, { keyPath: 'id' });
+                }
+            };
+        });
+    },
 
     init: async function () {
         console.log('DataHandler.init() starting...');
@@ -82,8 +110,11 @@ var DataHandler = {
         var self = this;
 
         try {
+            // Initialize IndexedDB
+            await this.initDB();
+
             // Step 1: Try to load from cache first (instant!)
-            var cachedData = this.loadFromCache();
+            var cachedData = await this.loadFromCache();
 
             if (cachedData && cachedData.length > 0) {
                 console.log('Found cached data:', cachedData.length, 'records');
@@ -100,7 +131,7 @@ var DataHandler = {
                 if (countEl) countEl.textContent = cachedData.length.toLocaleString() + ' records (cached)';
 
                 // Check if cache is stale and refresh in background
-                var cacheAge = this.getCacheAge();
+                var cacheAge = await this.getCacheAge();
                 if (cacheAge > this.CACHE_MAX_AGE_MS) {
                     console.log('Cache is stale (' + Math.round(cacheAge / 60000) + ' minutes old), refreshing in background...');
                     this.refreshCacheInBackground();
@@ -113,7 +144,7 @@ var DataHandler = {
             console.log('No cache found, fetching from API...');
             var allData = await this.fetchAllFacilities(progressEl, countEl, statusEl);
 
-            // Save to cache
+            // Save to cache (async, don't wait)
             this.saveToCache(allData);
 
             // Process the data
@@ -132,36 +163,76 @@ var DataHandler = {
         }
     },
 
-    loadFromCache: function () {
+    loadFromCache: async function () {
         try {
-            var cached = localStorage.getItem(this.CACHE_KEY);
-            if (cached) {
-                return JSON.parse(cached);
-            }
+            var db = await this.initDB();
+            return new Promise(function (resolve) {
+                var tx = db.transaction('facilities_cache', 'readonly');
+                var store = tx.objectStore('facilities_cache');
+                var request = store.get('data');
+                request.onsuccess = function () {
+                    if (request.result && request.result.facilities) {
+                        resolve(request.result.facilities);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                request.onerror = function () {
+                    console.warn('Cache read error');
+                    resolve(null);
+                };
+            });
         } catch (e) {
-            console.warn('Cache read error:', e);
-            localStorage.removeItem(this.CACHE_KEY);
+            console.warn('loadFromCache error:', e);
+            return null;
         }
-        return null;
     },
 
-    getCacheAge: function () {
-        var timestamp = localStorage.getItem(this.CACHE_TIMESTAMP_KEY);
-        if (timestamp) {
-            return Date.now() - parseInt(timestamp, 10);
+    getCacheAge: async function () {
+        try {
+            var db = await this.initDB();
+            return new Promise(function (resolve) {
+                var tx = db.transaction('facilities_cache', 'readonly');
+                var store = tx.objectStore('facilities_cache');
+                var request = store.get('data');
+                request.onsuccess = function () {
+                    if (request.result && request.result.timestamp) {
+                        resolve(Date.now() - request.result.timestamp);
+                    } else {
+                        resolve(Infinity);
+                    }
+                };
+                request.onerror = function () {
+                    resolve(Infinity);
+                };
+            });
+        } catch (e) {
+            return Infinity;
         }
-        return Infinity;
     },
 
-    saveToCache: function (data) {
+    saveToCache: async function (data) {
         try {
-            localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
-            localStorage.setItem(this.CACHE_TIMESTAMP_KEY, Date.now().toString());
-            console.log('Saved', data.length, 'records to cache');
+            var db = await this.initDB();
+            return new Promise(function (resolve) {
+                var tx = db.transaction('facilities_cache', 'readwrite');
+                var store = tx.objectStore('facilities_cache');
+                store.put({
+                    id: 'data',
+                    facilities: data,
+                    timestamp: Date.now()
+                });
+                tx.oncomplete = function () {
+                    console.log('Saved', data.length, 'records to IndexedDB cache');
+                    resolve(true);
+                };
+                tx.onerror = function () {
+                    console.warn('Cache write error');
+                    resolve(false);
+                };
+            });
         } catch (e) {
-            console.warn('Cache write error (storage full?):', e);
-            // Try to clear old cache
-            localStorage.removeItem(this.CACHE_KEY);
+            console.warn('saveToCache error:', e);
         }
     },
 
@@ -171,7 +242,7 @@ var DataHandler = {
             try {
                 console.log('Background refresh starting...');
                 var freshData = await self.fetchAllFacilities(null, null, null);
-                self.saveToCache(freshData);
+                await self.saveToCache(freshData);
                 self.processRawData(freshData);
                 console.log('Background refresh complete - data updated');
             } catch (e) {

@@ -23,6 +23,14 @@ var CRMApp = {
     providerModalFilters: [],
     currentProviderForModal: null,
 
+    // People state
+    peopleData: [],
+    filteredPeople: [],
+    peoplePage: 1,
+    peoplePerPage: 18,
+    currentPersonForModal: null,
+    peopleMiniMap: null,
+
     init: async function () {
         console.log('CRMApp initializing...');
 
@@ -196,6 +204,7 @@ var CRMApp = {
         else if (view === 'map') this.initMap();
         else if (view === 'analytics') this.renderAnalytics();
         else if (view === 'providers') this.renderProvidersView();
+        else if (view === 'people') this.renderPeopleView();
         else if (view === 'pipeline' && typeof PipelineView !== 'undefined') PipelineView.onViewActivate();
         else if (view === 'enrichment' && typeof EnrichmentStatus !== 'undefined') EnrichmentStatus.init();
     },
@@ -2704,6 +2713,16 @@ var CRMApp = {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     },
 
+    getRatingClass: function (rating) {
+        if (!rating) return 'unknown';
+        var r = rating.toLowerCase().replace(/\s+/g, '-');
+        if (r === 'requires-improvement') return 'requires';
+        if (r === 'inadequate') return 'inadequate';
+        if (r === 'outstanding') return 'outstanding';
+        if (r === 'good') return 'good';
+        return r;
+    },
+
     toggleDirectorsList: function () {
         var directorsList = document.getElementById('provider-directors-list');
         var viewMoreBtn = document.getElementById('view-more-directors-btn');
@@ -3212,6 +3231,642 @@ var CRMApp = {
         if (this.providerMiniMap) {
             this.providerMiniMap.remove();
             this.providerMiniMap = null;
+        }
+    },
+
+    // ========================================
+    // PEOPLE VIEW FUNCTIONS
+    // ========================================
+
+    buildPeopleData: async function () {
+        var self = this;
+        this.peopleData = [];
+
+        try {
+            // Fetch only nominated individuals from Supabase people table
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/people?select=*&role=eq.nominated_individual&order=total_beds.desc',
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                console.error('Failed to fetch people:', response.status);
+                return;
+            }
+
+            var people = await response.json();
+
+            // Map region codes to names
+            var regionMap = {
+                '0': 'East Midlands',
+                '1': 'East of England',
+                '2': 'London',
+                '3': 'North East',
+                '4': 'North West',
+                'Y': 'Yorkshire & Humber',
+                '5': 'South East',
+                '6': 'South West',
+                '7': 'West Midlands',
+                '8': 'Yorkshire and The Humber'
+            };
+
+            // Deduplicate by person name - keep only one entry per unique person (with highest beds)
+            // Since results are ordered by total_beds.desc, first occurrence has highest beds
+            var seenPeople = {};
+
+            people.forEach(function (p) {
+                // Aggressive normalization: lowercase, remove all non-alphanumeric, collapse spaces
+                var normalizedName = (p.name || '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '')  // Remove non-alphanumeric except spaces
+                    .replace(/\s+/g, ' ')          // Collapse multiple spaces
+                    .trim();
+
+                // Skip if we already have this person
+                if (seenPeople[normalizedName]) {
+                    return;
+                }
+                seenPeople[normalizedName] = true;
+
+                self.peopleData.push({
+                    id: p.id,
+                    name: p.name || 'Unknown',
+                    role: p.role,
+                    roleLabel: 'Nominated Individual',
+                    providerName: p.provider_name || 'Unknown Provider',
+                    providerId: p.provider_id,
+                    totalBeds: p.total_beds || 0,
+                    propertyCount: p.total_properties || 0,
+                    region: regionMap[p.region] || p.region || 'Unknown',
+                    yearsAtProvider: p.years_at_provider || 0,
+                    lastReportRating: p.last_report_rating || 'Unknown',
+                    lastInspectionDate: p.last_inspection_date,
+                    isEnriched: !!p.enriched_at,
+                    email: p.email,
+                    phone: p.phone,
+                    linkedinUrl: p.linkedin_url,
+                    contacted: p.contacted || false,
+                    contactedAt: p.contacted_at,
+                    notes: p.notes
+                });
+
+            });
+
+
+            console.log('Loaded ' + this.peopleData.length + ' people from Supabase');
+        } catch (error) {
+            console.error('Error fetching people:', error);
+        }
+
+        // Update people count badge
+        this.updatePeopleCount();
+    },
+
+
+    updatePeopleCount: function () {
+        var countEl = document.getElementById('people-count');
+        if (countEl) {
+            countEl.textContent = this.formatNumber(this.peopleData.length);
+        }
+    },
+
+    renderPeopleView: async function () {
+        // Build people data if not already built
+        if (this.peopleData.length === 0) {
+            await this.buildPeopleData();
+        }
+
+        // Populate region filter
+        this.populatePeopleRegionFilter();
+
+        // Setup search and filter handlers
+        this.setupPeopleSearch();
+
+        // Apply filters and render
+        this.filterPeople();
+    },
+
+
+    populatePeopleRegionFilter: function () {
+        var filterEl = document.getElementById('people-region-filter');
+        if (!filterEl) return;
+
+        var regions = {};
+        this.peopleData.forEach(function (person) {
+            if (person.region && person.region !== 'Unknown') {
+                regions[person.region] = true;
+            }
+        });
+
+        var regionList = Object.keys(regions).sort();
+        var html = '<option value="">All Regions</option>';
+        regionList.forEach(function (region) {
+            html += '<option value="' + region + '">' + region + '</option>';
+        });
+        filterEl.innerHTML = html;
+    },
+
+    setupPeopleSearch: function () {
+        var self = this;
+        var searchInput = document.getElementById('people-search');
+        var regionFilter = document.getElementById('people-region-filter');
+        var bedsFilter = document.getElementById('people-beds-filter');
+        var outreachFilter = document.getElementById('people-outreach-filter');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                self.peoplePage = 1;
+                self.filterPeople();
+            });
+        }
+
+        if (regionFilter) {
+            regionFilter.addEventListener('change', function () {
+                self.peoplePage = 1;
+                self.filterPeople();
+            });
+        }
+
+        if (bedsFilter) {
+            bedsFilter.addEventListener('change', function () {
+                self.peoplePage = 1;
+                self.filterPeople();
+            });
+        }
+
+        if (outreachFilter) {
+            outreachFilter.addEventListener('change', function () {
+                self.peoplePage = 1;
+                self.filterPeople();
+            });
+        }
+    },
+
+    filterPeople: function () {
+        var self = this;
+        var searchQuery = document.getElementById('people-search')?.value?.toLowerCase() || '';
+        var regionFilter = document.getElementById('people-region-filter')?.value || '';
+        var bedsFilter = document.getElementById('people-beds-filter')?.value || '';
+        var outreachFilter = document.getElementById('people-outreach-filter')?.value || '';
+
+        this.filteredPeople = this.peopleData.filter(function (person) {
+            // Search filter
+            if (searchQuery) {
+                var nameMatch = person.name.toLowerCase().indexOf(searchQuery) > -1;
+                var providerMatch = person.providerName.toLowerCase().indexOf(searchQuery) > -1;
+                if (!nameMatch && !providerMatch) return false;
+            }
+
+            // Region filter
+            if (regionFilter && person.region !== regionFilter) {
+                return false;
+            }
+
+            // Beds filter
+            if (bedsFilter) {
+                var beds = person.totalBeds || 0;
+                if (bedsFilter === '0-50' && (beds < 1 || beds > 50)) return false;
+                if (bedsFilter === '51-200' && (beds < 51 || beds > 200)) return false;
+                if (bedsFilter === '201-500' && (beds < 201 || beds > 500)) return false;
+                if (bedsFilter === '501+' && beds < 501) return false;
+            }
+
+            // Outreach filter
+            if (outreachFilter === 'contacted' && !person.contacted) return false;
+            if (outreachFilter === 'not-contacted' && person.contacted) return false;
+
+            return true;
+        });
+
+        // Update subtitle
+        var subtitleEl = document.getElementById('people-subtitle');
+        if (subtitleEl) {
+            subtitleEl.textContent = this.formatNumber(this.filteredPeople.length) + ' decision makers';
+        }
+
+        this.renderPeopleCards();
+    },
+
+
+    renderPeopleCards: function () {
+        var container = document.getElementById('people-grid');
+        if (!container) return;
+
+        var self = this;
+        var start = (this.peoplePage - 1) * this.peoplePerPage;
+        var end = start + this.peoplePerPage;
+        var pagePeople = this.filteredPeople.slice(start, end);
+
+        if (pagePeople.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No people found matching your filters</p></div>';
+            this.renderPeoplePagination();
+            return;
+        }
+
+        var html = '';
+        pagePeople.forEach(function (person) {
+            var initials = self.getInitials(person.name);
+            var regionLabel = person.region || 'Unknown';
+            var bedsFormatted = self.formatNumber(person.totalBeds);
+            var roleClass = person.role === 'nominated_individual' ? 'role-ni' : 'role-rm';
+            var ratingClass = self.getRatingClass(person.lastReportRating);
+            var yearsLabel = person.yearsAtProvider > 0 ? Math.round(person.yearsAtProvider) + ' yrs' : '';
+            var contactedClass = person.contacted ? 'contacted' : '';
+
+            html += '<div class="people-card ' + contactedClass + '" onclick="CRMApp.showPersonDetail(\'' + person.id + '\')">' +
+                '<div class="people-card-header">' +
+                '<div class="people-card-avatar">' + initials + '</div>' +
+                '<div class="people-card-info">' +
+                '<div class="people-card-name">' + self.escapeHtml(person.name) + '</div>' +
+                '<span class="people-role-badge ' + roleClass + '">' + person.roleLabel + '</span>' +
+                '</div>' +
+                '</div>' +
+                '<div class="people-card-provider">' + self.escapeHtml(person.providerName) + '</div>' +
+                '<div class="people-card-stats">' +
+                '<div class="people-stat">' +
+                '<span class="stat-value">' + bedsFormatted + '</span>' +
+                '<span class="stat-label">beds</span>' +
+                '</div>' +
+                '<div class="people-stat">' +
+                '<span class="stat-value">' + person.propertyCount + '</span>' +
+                '<span class="stat-label">properties</span>' +
+                '</div>' +
+                (yearsLabel ? '<div class="people-stat"><span class="stat-value">' + yearsLabel + '</span><span class="stat-label">tenure</span></div>' : '') +
+                '</div>' +
+                '<div class="people-card-footer">' +
+                '<span class="people-card-region">' + regionLabel + '</span>' +
+                '<span class="badge ' + ratingClass + '">' + (person.lastReportRating || 'Unknown') + '</span>' +
+                '</div>' +
+                '<div class="people-card-contact">' +
+                '<div class="contact-preview ' + (person.isEnriched ? 'unlocked' : 'locked') + '">' +
+                (person.isEnriched ?
+                    '<span class="contact-found">✓ Contact info</span>' :
+                    '<span class="contact-locked"><svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg> Unlock contact</span>') +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        });
+
+
+        container.innerHTML = html;
+        this.renderPeoplePagination();
+    },
+
+    renderPeoplePagination: function () {
+        var container = document.getElementById('people-pagination');
+        if (!container) return;
+
+        var totalPages = Math.ceil(this.filteredPeople.length / this.peoplePerPage) || 1;
+
+        container.innerHTML =
+            '<button ' + (this.peoplePage === 1 ? 'disabled' : '') + ' onclick="CRMApp.goToPeoplePage(' + (this.peoplePage - 1) + ')">← Previous</button>' +
+            '<span>Page ' + this.peoplePage + ' of ' + totalPages + '</span>' +
+            '<button ' + (this.peoplePage >= totalPages ? 'disabled' : '') + ' onclick="CRMApp.goToPeoplePage(' + (this.peoplePage + 1) + ')">Next →</button>';
+    },
+
+    goToPeoplePage: function (page) {
+        this.peoplePage = page;
+        this.renderPeopleCards();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    showPersonDetail: function (personId) {
+        var person = this.peopleData.find(function (p) { return p.id === personId; });
+        if (!person) return;
+
+        this.currentPersonForModal = person;
+
+        var modal = document.getElementById('people-detail-modal');
+        var nameEl = document.getElementById('people-modal-name');
+        var providerEl = document.getElementById('people-modal-provider');
+        var countEl = document.getElementById('people-modal-count');
+        var avatarEl = document.getElementById('person-avatar');
+        var providerNameEl = document.getElementById('person-provider-name');
+        var providerCountEl = document.getElementById('person-provider-count');
+        var linkedInEl = document.getElementById('person-linkedin');
+        var phoneEl = document.getElementById('person-phone');
+        var emailEl = document.getElementById('person-email');
+        var unlockSection = document.getElementById('person-unlock-section');
+        var unlockBtn = document.getElementById('person-unlock-btn');
+
+        if (nameEl) nameEl.textContent = person.name;
+        if (providerEl) providerEl.textContent = person.providerName;
+        if (countEl) countEl.textContent = this.formatNumber(person.propertyCount) + ' properties';
+        if (avatarEl) avatarEl.textContent = this.getInitials(person.name);
+        if (providerNameEl) providerNameEl.textContent = person.providerName;
+        if (providerCountEl) providerCountEl.textContent = person.propertyCount + ' properties';
+
+        // Populate stats section
+        var roleEl = document.getElementById('person-role');
+        var totalBedsEl = document.getElementById('person-total-beds');
+        var totalPropsEl = document.getElementById('person-total-properties');
+        var avgBedsEl = document.getElementById('person-avg-beds');
+        var tenureEl = document.getElementById('person-tenure');
+        var ratingBadgeEl = document.getElementById('person-rating-badge');
+
+        if (roleEl) roleEl.textContent = person.roleLabel || 'Decision Maker';
+        if (totalBedsEl) totalBedsEl.textContent = this.formatNumber(person.totalBeds || 0);
+        if (totalPropsEl) totalPropsEl.textContent = this.formatNumber(person.propertyCount || 0);
+
+        // Calculate average beds per property
+        var avgBeds = person.propertyCount > 0 ? Math.round(person.totalBeds / person.propertyCount) : 0;
+        if (avgBedsEl) avgBedsEl.textContent = avgBeds;
+
+        // Format tenure
+        var tenureText = person.yearsAtProvider > 0 ? Math.round(person.yearsAtProvider) + ' years' : 'Unknown';
+        if (tenureEl) tenureEl.textContent = tenureText;
+
+        // Rating badge
+        if (ratingBadgeEl) {
+            ratingBadgeEl.textContent = person.lastReportRating || 'Unknown';
+            ratingBadgeEl.className = 'badge ' + this.getRatingClass(person.lastReportRating);
+        }
+
+        // LinkedIn search link - use linkedin.com at end (not site:linkedin.com)
+        if (linkedInEl) {
+            var searchQuery = person.name + ' ' + person.providerName + ' linkedin.com';
+            linkedInEl.href = 'https://www.google.com/search?q=' + encodeURIComponent(searchQuery);
+        }
+
+        // Reset contact display
+        if (phoneEl) {
+            phoneEl.textContent = person.phone || '••••••••••';
+            phoneEl.className = 'contact-value ' + (person.phone ? 'contact-found' : 'contact-blurred');
+        }
+        if (emailEl) {
+            emailEl.textContent = person.email || '••••••••••••••';
+            emailEl.className = 'contact-value ' + (person.email ? 'contact-found' : 'contact-blurred');
+        }
+
+        // Show/hide unlock button based on enrichment status
+        if (unlockSection && unlockBtn) {
+            if (person.isEnriched) {
+                unlockSection.style.display = 'none';
+            } else {
+                unlockSection.style.display = 'block';
+                unlockBtn.disabled = false;
+                var btnText = unlockBtn.querySelector('.btn-text');
+                if (btnText) btnText.textContent = 'Unlock Contact Info';
+                unlockBtn.classList.remove('btn-success');
+            }
+        }
+
+        // Check for existing enrichment data
+        this.checkPersonEnrichment(person);
+
+        // Show modal
+        if (modal) modal.classList.add('active');
+
+        // Initialize mini map
+        var self = this;
+        setTimeout(function () {
+            self.renderPeopleMiniMap(person);
+        }, 100);
+    },
+
+    checkPersonEnrichment: function (person) {
+        var self = this;
+        var providerId = person.providerId.replace('provider-', '');
+
+        // Query for existing enrichment data
+        this.supabase
+            .from('facilities')
+            .select('directors')
+            .eq('Provider ID', providerId)
+            .limit(1)
+            .then(function (response) {
+                if (response.error || !response.data || response.data.length === 0) {
+                    return;
+                }
+
+                var data = response.data[0];
+                if (data.directors && Array.isArray(data.directors)) {
+                    // Try to find this person in the directors list
+                    var personMatch = data.directors.find(function (d) {
+                        return d.name && d.name.toLowerCase() === person.name.toLowerCase();
+                    });
+
+                    if (personMatch && (personMatch.enriched_email || personMatch.enriched_phone)) {
+                        // Update person data
+                        person.isEnriched = true;
+                        person.email = personMatch.enriched_email || null;
+                        person.phone = personMatch.enriched_phone || null;
+
+                        // Update UI
+                        var phoneEl = document.getElementById('person-phone');
+                        var emailEl = document.getElementById('person-email');
+                        var unlockSection = document.getElementById('person-unlock-section');
+
+                        if (phoneEl) {
+                            phoneEl.textContent = person.phone || 'Requires enrichment';
+                            phoneEl.className = 'contact-value ' + (person.phone ? 'contact-found' : 'contact-pending');
+                        }
+                        if (emailEl) {
+                            emailEl.textContent = person.email || 'Requires enrichment';
+                            emailEl.className = 'contact-value ' + (person.email ? 'contact-found' : 'contact-pending');
+                        }
+                        if (unlockSection) {
+                            unlockSection.style.display = 'none';
+                        }
+                    }
+                }
+            });
+    },
+
+    enrichPerson: function () {
+        var self = this;
+        var btn = document.getElementById('person-unlock-btn');
+        var btnText = btn ? btn.querySelector('.btn-text') : null;
+        var btnSpinner = btn ? btn.querySelector('.btn-spinner') : null;
+        var btnIcon = btn ? btn.querySelector('.btn-icon-svg') : null;
+        var phoneEl = document.getElementById('person-phone');
+        var emailEl = document.getElementById('person-email');
+        var unlockSection = document.getElementById('person-unlock-section');
+
+        if (!this.currentPersonForModal) {
+            console.error('No current person to enrich');
+            return;
+        }
+
+        var person = this.currentPersonForModal;
+        var companyName = person.providerName;
+        var personName = person.name;
+        var providerId = person.providerId.replace('provider-', '');
+
+        // Show loading state
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.textContent = 'Searching...';
+        if (btnIcon) btnIcon.style.display = 'none';
+        if (btnSpinner) btnSpinner.style.display = 'inline-flex';
+
+        // Call the enrich-director Edge Function
+        fetch('https://qdrbwvxqtgwjgitcambn.supabase.co/functions/v1/enrich-director', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                directorName: personName,
+                companyName: companyName,
+                providerId: providerId
+            })
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (btnSpinner) btnSpinner.style.display = 'none';
+                if (btnIcon) btnIcon.style.display = 'block';
+
+                if (data.success && (data.email || data.phone)) {
+                    // Update person data
+                    person.isEnriched = true;
+                    person.email = data.email || null;
+                    person.phone = data.phone || null;
+
+                    // Update UI
+                    if (phoneEl) {
+                        phoneEl.textContent = data.phone || 'Not found';
+                        phoneEl.className = 'contact-value ' + (data.phone ? 'contact-found' : 'contact-not-found');
+                    }
+                    if (emailEl) {
+                        emailEl.textContent = data.email || 'Not found';
+                        emailEl.className = 'contact-value ' + (data.email ? 'contact-found' : 'contact-not-found');
+                    }
+
+                    if (btnText) btnText.textContent = 'Unlocked!';
+                    btn.classList.add('btn-success');
+
+                    // Hide unlock button after success
+                    setTimeout(function () {
+                        if (unlockSection) unlockSection.style.display = 'none';
+                    }, 1500);
+
+                    // Re-render cards to show updated status
+                    self.renderPeopleCards();
+                } else {
+                    // No match found
+                    if (phoneEl) {
+                        phoneEl.textContent = 'Not found';
+                        phoneEl.className = 'contact-value contact-not-found';
+                    }
+                    if (emailEl) {
+                        emailEl.textContent = 'Not found';
+                        emailEl.className = 'contact-value contact-not-found';
+                    }
+                    if (btnText) btnText.textContent = 'Not Found';
+                    setTimeout(function () {
+                        if (btnText) btnText.textContent = 'Unlock Contact Info';
+                        if (btn) btn.disabled = false;
+                    }, 2000);
+                }
+            })
+            .catch(function (error) {
+                console.error('Enrichment error:', error);
+                if (btnText) btnText.textContent = 'Error';
+                if (btnSpinner) btnSpinner.style.display = 'none';
+                if (btnIcon) btnIcon.style.display = 'block';
+                if (btn) btn.disabled = false;
+                setTimeout(function () {
+                    if (btnText) btnText.textContent = 'Unlock Contact Info';
+                }, 2000);
+            });
+    },
+
+    renderPeopleMiniMap: function (person) {
+        var mapContainer = document.getElementById('people-mini-map');
+        if (!mapContainer) return;
+
+        // Clear existing map
+        if (this.peopleMiniMap) {
+            this.peopleMiniMap.remove();
+            this.peopleMiniMap = null;
+        }
+
+        // Create map
+        this.peopleMiniMap = L.map(mapContainer, {
+            center: [54.5, -2],
+            zoom: 5,
+            zoomControl: true
+        });
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap, &copy; CartoDB',
+            maxZoom: 19
+        }).addTo(this.peopleMiniMap);
+
+        // Add markers for all provider's facilities
+        var bounds = [];
+        var colors = {
+            'Outstanding': '#22c55e',
+            'Good': '#3b82f6',
+            'Requires improvement': '#f59e0b',
+            'Inadequate': '#ef4444'
+        };
+
+        var self = this;
+        var provider = person.provider;
+
+        if (provider && provider.facilities) {
+            provider.facilities.forEach(function (f) {
+                var lat = f.address?.latitude;
+                var lng = f.address?.longitude;
+
+                if (!lat || !lng) return;
+
+                var color = colors[f.overallRating] || '#8c8c8c';
+
+                var icon = L.divIcon({
+                    html: '<div style="width:12px;height:12px;background:' + color + ';border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>',
+                    className: 'people-map-marker',
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                });
+
+                var marker = L.marker([lat, lng], { icon: icon }).addTo(self.peopleMiniMap);
+                marker.bindPopup('<div class="popup-title">' + self.escapeHtml(f.name) + '</div><div class="popup-meta">' + (f.overallRating || 'Not Rated') + '</div>');
+
+                bounds.push([lat, lng]);
+            });
+        }
+
+        // Fit bounds if we have markers
+        if (bounds.length > 0) {
+            if (bounds.length === 1) {
+                this.peopleMiniMap.setView(bounds[0], 12);
+            } else {
+                this.peopleMiniMap.fitBounds(bounds, { padding: [20, 20] });
+            }
+        }
+    },
+
+    openProviderFromPerson: function () {
+        if (!this.currentPersonForModal) return;
+
+        var providerId = this.currentPersonForModal.providerId;
+
+        // Close person modal
+        this.closePersonDetail();
+
+        // Switch to providers view and open provider modal
+        this.switchView('providers');
+        this.showProviderDetail(providerId);
+    },
+
+    closePersonDetail: function () {
+        var modal = document.getElementById('people-detail-modal');
+        if (modal) modal.classList.remove('active');
+
+        // Reset modal state
+        this.currentPersonForModal = null;
+
+        // Clean up mini map
+        if (this.peopleMiniMap) {
+            this.peopleMiniMap.remove();
+            this.peopleMiniMap = null;
         }
     }
 };
