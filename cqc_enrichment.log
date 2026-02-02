@@ -108,3 +108,14 @@ Estimated time for batch: 1.7 minutes
 [800/1000] (80.0%) | Success: 798 | Failed: 2 | Rate: 0.9/sec | ETA: 3.6 min
   Error: HTTPSConnectionPool(host='qdrbwvxqtgwjgitcambn.supabase.co', port=443): Read timed out. (read timeout=30)
 [900/1000] (90.0%) | Success: 897 | Failed: 3 | Rate: 0.9/sec | ETA: 1.8 min
+[1000/1000] (100.0%) | Success: 997 | Failed: 3 | Rate: 0.9/sec | ETA: 0.0 min
+
+Batch 5 complete: 997 success, 3 failed in 18.3 min
+Overall progress: 4989 enriched, 11 failed
+
+--- BATCH 6 ---
+Fetching care homes to enrich...
+Found 1000 care homes to enrich in this batch
+Estimated time for batch: 1.7 minutes
+------------------------------------------------------------
+[100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 0.9/sec | ETA: 16.5 min

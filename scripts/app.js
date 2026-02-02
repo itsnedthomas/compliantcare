@@ -71,6 +71,12 @@ var CRMApp = {
             // Update providers count on init
             this.updateInitialProvidersCount();
 
+            // Build people data in background and update count
+            this.buildPeopleData();
+
+            // Initialize pipeline count
+            this.initializePipelineCount();
+
             // Check for URL-based provider popup
             this.handleUrlParams();
 
@@ -132,6 +138,33 @@ var CRMApp = {
         });
         var badge = document.getElementById('providers-count');
         if (badge) badge.textContent = this.formatNumber(providersSet.size);
+    },
+
+    initializePipelineCount: async function () {
+        // Fetch pipeline opportunities count without loading the full pipeline view
+        try {
+            const response = await fetch('http://localhost:8081/api/pipelines');
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const pipelines = data.pipelines || [];
+
+            if (pipelines.length > 0) {
+                // Fetch opportunities for the first pipeline
+                const oppResponse = await fetch(`http://localhost:8081/api/opportunities?pipelineId=${pipelines[0].id}`);
+                if (oppResponse.ok) {
+                    const oppData = await oppResponse.json();
+                    const opportunities = oppData.opportunities || [];
+
+                    var countEl = document.getElementById('pipeline-count');
+                    if (countEl) {
+                        countEl.textContent = opportunities.length;
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('[CRMApp] Pipeline count init skipped:', error.message);
+        }
     },
 
     getGlobalFilteredFacilities: function () {
@@ -350,9 +383,11 @@ var CRMApp = {
         // Animate stats
         this.animateValue('stat-total', stats.total);
 
-        // Providers count - use pre-loaded or calculate
-        var providersCount = stats.providers || 0;
+        // Providers count - always use pre-loaded from dashboard_stats view
+        // (Calculated from unique Provider IDs across all facilities in Supabase)
+        var providersCount = DataHandler.stats.providers || stats.providers || 0;
         if (!providersCount && facilities.length) {
+            // Fallback: calculate from loaded facilities
             var providersSet = new Set();
             facilities.forEach(function (f) {
                 if (f.provider && f.provider.id) {
@@ -363,16 +398,12 @@ var CRMApp = {
         }
         this.animateValue('stat-providers-total', providersCount);
 
-        // People count - use pre-loaded or calculate
-        var peopleCount = stats.people || 0;
-        if (!peopleCount && facilities.length) {
-            var peopleSet = new Set();
-            facilities.forEach(function (f) {
-                if (f.nominatedIndividualName) {
-                    peopleSet.add(f.nominatedIndividualName.toLowerCase().trim());
-                }
-            });
-            peopleCount = peopleSet.size;
+        // People count - always use pre-loaded from dashboard_stats view
+        // (Comes from separate 'people' table, not facility data)
+        var peopleCount = DataHandler.stats.people || stats.people || 0;
+        if (!peopleCount && this.peopleData && this.peopleData.length) {
+            // Fallback: use loaded people data if available
+            peopleCount = this.peopleData.length;
         }
         this.animateValue('stat-people-total', peopleCount);
 
@@ -3854,10 +3885,20 @@ var CRMApp = {
             contextRatingEl.className = 'badge ' + this.getRatingClass(person.lastReportRating);
         }
 
-        // LinkedIn search link - use linkedin.com at end (not site:linkedin.com)
+        // LinkedIn link - use enriched URL if available, otherwise Google search
         if (linkedInEl) {
-            var searchQuery = person.name + ' ' + person.providerName + ' linkedin.com';
-            linkedInEl.href = 'https://www.google.com/search?q=' + encodeURIComponent(searchQuery);
+            if (person.linkedinUrl) {
+                // Direct LinkedIn profile link
+                linkedInEl.href = person.linkedinUrl;
+                linkedInEl.textContent = 'View LinkedIn →';
+                linkedInEl.classList.add('linkedin-direct');
+            } else {
+                // Fallback to Google search
+                var searchQuery = person.name + ' ' + person.providerName + ' linkedin.com';
+                linkedInEl.href = 'https://www.google.com/search?q=' + encodeURIComponent(searchQuery);
+                linkedInEl.textContent = 'Search on LinkedIn →';
+                linkedInEl.classList.remove('linkedin-direct');
+            }
         }
 
         // Reset contact display
@@ -4016,11 +4057,13 @@ var CRMApp = {
                 if (btnSpinner) btnSpinner.style.display = 'none';
                 if (btnIcon) btnIcon.style.display = 'block';
 
-                if (data.success && (data.email || data.phone)) {
+                // Success if we found any data (email, phone, or linkedin)
+                if (data.success && (data.email || data.phone || data.linkedin_url)) {
                     // Update person data
                     person.isEnriched = true;
                     person.email = data.email || null;
                     person.phone = data.phone || null;
+                    person.linkedinUrl = data.linkedin_url || null;
 
                     // Update UI
                     if (phoneEl) {
@@ -4030,6 +4073,14 @@ var CRMApp = {
                     if (emailEl) {
                         emailEl.textContent = data.email || 'Not found';
                         emailEl.className = 'contact-value ' + (data.email ? 'contact-found' : 'contact-not-found');
+                    }
+
+                    // Update LinkedIn button with direct URL
+                    var linkedInEl = document.getElementById('person-linkedin');
+                    if (linkedInEl && data.linkedin_url) {
+                        linkedInEl.href = data.linkedin_url;
+                        linkedInEl.textContent = 'View LinkedIn →';
+                        linkedInEl.classList.add('linkedin-direct');
                     }
 
                     if (btnText) btnText.textContent = 'Unlocked!';

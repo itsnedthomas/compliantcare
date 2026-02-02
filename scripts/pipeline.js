@@ -13,6 +13,8 @@ const PipelineView = {
     hasError: false,
     refreshInterval: null,
     REFRESH_INTERVAL_MS: 30000, // Auto-refresh every 30 seconds
+    pendingMoves: new Map(), // Track recently moved opportunities to prevent stale data overwrite
+    MOVE_GRACE_PERIOD_MS: 60000, // Don't overwrite moves for 60 seconds (GHL eventual consistency)
 
     // API endpoint for the Python backend proxy server
     API_BASE: 'http://localhost:8081/api',
@@ -99,9 +101,19 @@ const PipelineView = {
 
     /**
      * Silently refresh pipeline data without showing loading states
+     * Respects recently-moved opportunities to avoid GHL eventual consistency issues
      */
     async silentRefresh() {
         console.log('[PipelineView] Silent refresh...');
+
+        // Clean up expired pending moves
+        const now = Date.now();
+        for (const [oppId, moveTime] of this.pendingMoves) {
+            if (now - moveTime > this.MOVE_GRACE_PERIOD_MS) {
+                this.pendingMoves.delete(oppId);
+            }
+        }
+
         try {
             const pipelines = await this.fetchPipelines();
             if (pipelines && pipelines.length > 0) {
@@ -114,8 +126,23 @@ const PipelineView = {
                         this.currentPipeline = updated;
                         this.stages = updated.stages || [];
 
-                        // Refresh opportunities and re-render
-                        this.opportunities = await this.fetchOpportunities(this.currentPipeline.id);
+                        // Fetch fresh opportunities from server
+                        const freshOpportunities = await this.fetchOpportunities(this.currentPipeline.id);
+
+                        // Merge: preserve local stageId for recently-moved opportunities
+                        this.opportunities = freshOpportunities.map(freshOpp => {
+                            const pendingMoveTime = this.pendingMoves.get(freshOpp.id);
+                            if (pendingMoveTime && (now - pendingMoveTime < this.MOVE_GRACE_PERIOD_MS)) {
+                                // This opportunity was recently moved - keep local state
+                                const localOpp = this.opportunities.find(o => o.id === freshOpp.id);
+                                if (localOpp) {
+                                    console.log(`[PipelineView] Preserving local stage for ${freshOpp.name} (moved ${Math.round((now - pendingMoveTime) / 1000)}s ago)`);
+                                    return { ...freshOpp, stageId: localOpp.stageId };
+                                }
+                            }
+                            return freshOpp;
+                        });
+
                         this.renderBoard();
                         console.log('[PipelineView] Board refreshed with', this.stages.length, 'stages');
                     }
@@ -358,6 +385,12 @@ const PipelineView = {
 
         const oldStageId = opportunity.stageId;
 
+        // Skip if already in this stage
+        if (oldStageId === newStageId) {
+            console.log('[PipelineView] Already in this stage, skipping');
+            return;
+        }
+
         // Optimistic update: move immediately in UI
         opportunity.stageId = newStageId;
         this.renderBoard();
@@ -382,6 +415,10 @@ const PipelineView = {
 
             const result = await response.json();
             console.log('[PipelineView] ✅ Opportunity moved in GHL:', result);
+
+            // Track this move to prevent silentRefresh from overwriting it
+            // GHL has eventual consistency - updates may not appear in list API for ~10-30 seconds
+            this.pendingMoves.set(opportunityId, Date.now());
 
             // Update badge count
             this.updateOpportunityCount();
