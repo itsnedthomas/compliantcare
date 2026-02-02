@@ -101,6 +101,14 @@
                     </svg>
                     Enrichment
                 </a>
+                <a href="#" class="nav-link" data-view="free-audit">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Free Audit
+                </a>
             </nav>
 
             <div class="sidebar-footer user-section" id="user-section" style="display: none;">
@@ -673,6 +681,316 @@
                 </div>
             </section>
 
+            <!-- Free Audit View -->
+            <section id="free-audit-view" class="view">
+                <div class="audit-search-container">
+                    <div class="audit-hero">
+                        <div class="audit-hero-content">
+                            <h1 class="audit-title">Free Care Home Audit</h1>
+                            <p class="audit-subtitle">Search for any care home in England to receive a comprehensive
+                                compliance audit</p>
+                        </div>
+                        <div class="audit-search-wrapper">
+                            <div class="audit-search-box">
+                                <svg class="search-icon" width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <input type="text" id="audit-search-input"
+                                    placeholder="Start typing a care home name..." autocomplete="off">
+                                <div class="audit-search-hint">
+                                    <span class="hint-text">Press Enter to search or click a suggestion</span>
+                                </div>
+                            </div>
+                            <div class="audit-suggestions" id="audit-suggestions"></div>
+                        </div>
+                        <div class="audit-examples">
+                            <span>Try:</span>
+                            <button class="example-btn" onclick="FreeAudit.searchExample('Sunrise')">Sunrise Care
+                                Home</button>
+                            <button class="example-btn" onclick="FreeAudit.searchExample('Manor')">Manor House</button>
+                            <button class="example-btn" onclick="FreeAudit.searchExample('Rose')">Rose Cottage</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Results (Initially Hidden) -->
+                <div class="audit-results-container" id="audit-results-container" style="display: none;">
+                    <div class="audit-loading" id="audit-loading">
+                        <div class="audit-loading-content">
+                            <div class="audit-loading-spinner"></div>
+                            <h3>Generating Compliance Audit</h3>
+                            <p id="audit-loading-status">Analyzing care home data...</p>
+                            <div class="audit-loading-steps">
+                                <div class="loading-step" data-step="1">
+                                    <svg class="step-icon" width="16" height="16" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Fetching CQC Data</span>
+                                </div>
+                                <div class="loading-step" data-step="2">
+                                    <svg class="step-icon" width="16" height="16" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Checking Inspection History</span>
+                                </div>
+                                <div class="loading-step" data-step="3">
+                                    <svg class="step-icon" width="16" height="16" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Analyzing Ratings</span>
+                                </div>
+                                <div class="loading-step" data-step="4">
+                                    <svg class="step-icon" width="16" height="16" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Generating Audit Report</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="audit-report" id="audit-report" style="display: none;">
+                        <!-- Report Header -->
+                        <div class="audit-report-header">
+                            <button class="audit-back-btn" onclick="FreeAudit.backToSearch()">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                Search Another
+                            </button>
+                            <div class="audit-report-badge">Free Audit</div>
+                        </div>
+
+                        <!-- Care Home Header Card -->
+                        <div class="audit-home-header card animate-in" id="audit-home-header">
+                            <div class="home-header-content">
+                                <div class="home-header-left">
+                                    <h1 class="home-name" id="audit-home-name">Care Home Name</h1>
+                                    <p class="home-address" id="audit-home-address">123 Example Street, City, Postcode
+                                    </p>
+                                    <div class="home-provider">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd"
+                                                d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                        <span id="audit-provider-name">Provider Name</span>
+                                    </div>
+                                </div>
+                                <div class="home-header-right">
+                                    <div class="home-rating-display">
+                                        <span class="rating-label">CQC Rating</span>
+                                        <span class="badge badge-lg" id="audit-overall-rating">Good</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Key Stats Row -->
+                        <div class="audit-stats-row animate-in delay-1" id="audit-stats-row">
+                            <div class="audit-stat-card">
+                                <div class="stat-icon beds">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M2 4v16M2 8h18a2 2 0 012 2v10M2 17h20M6 8v9" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="audit-beds">--</span>
+                                    <span class="stat-label">Total Beds</span>
+                                </div>
+                            </div>
+                            <div class="audit-stat-card">
+                                <div class="stat-icon inspection">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="audit-last-inspection">--</span>
+                                    <span class="stat-label">Last Inspection</span>
+                                </div>
+                            </div>
+                            <div class="audit-stat-card">
+                                <div class="stat-icon registered">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="audit-registered">--</span>
+                                    <span class="stat-label">Registered Since</span>
+                                </div>
+                            </div>
+                            <div class="audit-stat-card">
+                                <div class="stat-icon location">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <span class="stat-number" id="audit-region">--</span>
+                                    <span class="stat-label">Region</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ratings Breakdown -->
+                        <div class="audit-section animate-in delay-2">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3>CQC Ratings Breakdown</h3>
+                                    <span class="card-subtitle">Key Quality Indicators</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="ratings-grid" id="audit-ratings-grid">
+                                        <div class="rating-domain">
+                                            <div class="domain-header">
+                                                <span class="domain-name">Safe</span>
+                                                <span class="badge" id="audit-rating-safe">--</span>
+                                            </div>
+                                            <div class="domain-bar">
+                                                <div class="domain-fill" id="audit-bar-safe"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rating-domain">
+                                            <div class="domain-header">
+                                                <span class="domain-name">Effective</span>
+                                                <span class="badge" id="audit-rating-effective">--</span>
+                                            </div>
+                                            <div class="domain-bar">
+                                                <div class="domain-fill" id="audit-bar-effective"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rating-domain">
+                                            <div class="domain-header">
+                                                <span class="domain-name">Caring</span>
+                                                <span class="badge" id="audit-rating-caring">--</span>
+                                            </div>
+                                            <div class="domain-bar">
+                                                <div class="domain-fill" id="audit-bar-caring"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rating-domain">
+                                            <div class="domain-header">
+                                                <span class="domain-name">Responsive</span>
+                                                <span class="badge" id="audit-rating-responsive">--</span>
+                                            </div>
+                                            <div class="domain-bar">
+                                                <div class="domain-fill" id="audit-bar-responsive"></div>
+                                            </div>
+                                        </div>
+                                        <div class="rating-domain">
+                                            <div class="domain-header">
+                                                <span class="domain-name">Well-Led</span>
+                                                <span class="badge" id="audit-rating-wellled">--</span>
+                                            </div>
+                                            <div class="domain-bar">
+                                                <div class="domain-fill" id="audit-bar-wellled"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Leadership & Contact -->
+                        <div class="audit-section animate-in delay-3">
+                            <div class="audit-grid-2">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>Leadership</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="leadership-info">
+                                            <div class="leader-item" id="audit-ni-section">
+                                                <div class="leader-role">Nominated Individual</div>
+                                                <div class="leader-name" id="audit-ni-name">--</div>
+                                            </div>
+                                            <div class="leader-item" id="audit-rm-section">
+                                                <div class="leader-role">Registered Manager</div>
+                                                <div class="leader-name" id="audit-rm-name">--</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3>Contact Information</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="contact-info">
+                                            <div class="contact-item">
+                                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path
+                                                        d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                                </svg>
+                                                <span id="audit-phone">--</span>
+                                            </div>
+                                            <div class="contact-item">
+                                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd"
+                                                        d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                                <a href="#" id="audit-website" target="_blank">--</a>
+                                            </div>
+                                            <div class="contact-item">
+                                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd"
+                                                        d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                                <a href="#" id="audit-cqc-link" target="_blank">View on CQC</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CTA Section -->
+                        <div class="audit-cta animate-in delay-4">
+                            <div class="cta-card">
+                                <div class="cta-content">
+                                    <h3>Need a Full Compliance Assessment?</h3>
+                                    <p>Get detailed insights, recommendations, and ongoing compliance support from our
+                                        team of experts.</p>
+                                </div>
+                                <div class="cta-actions">
+                                    <a href="mailto:hello@compliantcare.co.uk" class="btn btn-primary btn-lg">Contact
+                                        Us</a>
+                                    <a href="https://compliantcare.co.uk" target="_blank"
+                                        class="btn btn-secondary btn-lg">Learn More</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Enrichment Status View -->
             <section id="enrichment-view" class="view">
                 <header class="view-header">
@@ -1083,6 +1401,7 @@
     <script src="scripts/enrichment.js"></script>
     <script src="scripts/auth.js"></script>
     <script src="scripts/pipeline.js"></script>
+    <script src="scripts/free-audit.js"></script>
     <script src="scripts/app.js"></script>
 </body>
 

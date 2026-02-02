@@ -248,6 +248,7 @@ var CRMApp = {
         else if (view === 'people') this.renderPeopleView();
         else if (view === 'pipeline' && typeof PipelineView !== 'undefined') PipelineView.onViewActivate();
         else if (view === 'enrichment' && typeof EnrichmentStatus !== 'undefined') EnrichmentStatus.init();
+        else if (view === 'free-audit' && typeof FreeAudit !== 'undefined') FreeAudit.init();
     },
 
     setupSearch: function () {
