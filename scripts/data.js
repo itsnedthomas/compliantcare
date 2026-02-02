@@ -179,11 +179,13 @@ var DataHandler = {
                 if (data && data[0]) {
                     this.stats = {
                         total: data[0].total || 0,
-                        careHomes: data[0].care_homes || 0,
+                        careHomes: data[0].careHomes || 0,
                         outstanding: data[0].outstanding || 0,
                         good: data[0].good || 0,
-                        requiresImprovement: data[0].requires_improvement || 0,
-                        inadequate: data[0].inadequate || 0
+                        requiresImprovement: data[0].requiresImprovement || 0,
+                        inadequate: data[0].inadequate || 0,
+                        providers: data[0].providers || 0,
+                        people: data[0].people || 0
                     };
                     console.log('Loaded dashboard stats:', this.stats);
                 }

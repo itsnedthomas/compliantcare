@@ -350,23 +350,31 @@ var CRMApp = {
         // Animate stats
         this.animateValue('stat-total', stats.total);
 
-        // Calculate and animate providers count
-        var providersSet = new Set();
-        facilities.forEach(function (f) {
-            if (f.provider && f.provider.id) {
-                providersSet.add(f.provider.id);
-            }
-        });
-        this.animateValue('stat-providers-total', providersSet.size);
+        // Providers count - use pre-loaded or calculate
+        var providersCount = stats.providers || 0;
+        if (!providersCount && facilities.length) {
+            var providersSet = new Set();
+            facilities.forEach(function (f) {
+                if (f.provider && f.provider.id) {
+                    providersSet.add(f.provider.id);
+                }
+            });
+            providersCount = providersSet.size;
+        }
+        this.animateValue('stat-providers-total', providersCount);
 
-        // Calculate and animate people count (unique nominated individuals)
-        var peopleSet = new Set();
-        facilities.forEach(function (f) {
-            if (f.nominatedIndividualName) {
-                peopleSet.add(f.nominatedIndividualName.toLowerCase().trim());
-            }
-        });
-        this.animateValue('stat-people-total', peopleSet.size);
+        // People count - use pre-loaded or calculate
+        var peopleCount = stats.people || 0;
+        if (!peopleCount && facilities.length) {
+            var peopleSet = new Set();
+            facilities.forEach(function (f) {
+                if (f.nominatedIndividualName) {
+                    peopleSet.add(f.nominatedIndividualName.toLowerCase().trim());
+                }
+            });
+            peopleCount = peopleSet.size;
+        }
+        this.animateValue('stat-people-total', peopleCount);
 
         this.animateValue('stat-outstanding', stats.outstanding);
         this.animateValue('stat-good', stats.good);
