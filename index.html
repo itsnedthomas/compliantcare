@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CompliantCare | Healthcare Facility CRM</title>
+    <link rel="stylesheet" href="styles/crm.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <!-- Loading -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <rect width="24" height="24" rx="6" fill="#10b981" />
+                        <path d="M7 12l3 3 7-7" stroke="white" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span>CompliantCare</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" data-view="dashboard">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
+                    Home
+                </a>
+                <a href="#" class="nav-link" data-view="list">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                    </svg>
+                    Facilities
+                    <span class="nav-badge" id="facilities-count">0</span>
+                </a>
+                <a href="#" class="nav-link" data-view="providers">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                    </svg>
+                    Providers
+                    <span class="nav-badge" id="providers-count">0</span>
+                </a>
+                <a href="#" class="nav-link" data-view="map">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M12 1.586l-4 4v12.828l4-4V1.586zM3.707 3.293A1 1 0 002 4v10a1 1 0 00.293.707L6 18.414V5.586L3.707 3.293zM17.707 5.293L14 1.586v12.828l2.293 2.293A1 1 0 0018 16V6a1 1 0 00-.293-.707z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Map View
+                </a>
+            </nav>
+
+            <div class="sidebar-footer user-section" id="user-section" style="display: none;">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div class="user-details">
+                        <span class="user-email" id="user-email">user@example.com</span>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="AuthHandler.signOut()">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view active">
+                <header class="view-header">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p class="subtitle">
+                            <span class="status-dot"></span>
+                            Live facility data
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <input type="text" id="search-input" placeholder="Search facilities...">
+                        </div>
+                        <button class="btn btn-primary" onclick="CRMApp.exportData()">Export</button>
+                    </div>
+                </header>
+
+                <!-- Stats Cards -->
+                <div class="stats-row">
+                    <div class="stat-card stat-card-fixed">
+                        <div class="stat-label">Total Care Homes</div>
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-chart" id="spark-total"></div>
+                    </div>
+                    <div class="stats-ratings">
+                        <div class="stat-card stat-card-rating">
+                            <div class="stat-icon green">
+                                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="stat-outstanding">0</div>
+                                <div class="stat-label">Outstanding</div>
+                            </div>
+                            <div class="stat-pct" id="stat-outstanding-pct">0%</div>
+                        </div>
+                        <div class="stat-card stat-card-rating">
+                            <div class="stat-icon blue">
+                                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="stat-good">0</div>
+                                <div class="stat-label">Good</div>
+                            </div>
+                            <div class="stat-pct" id="stat-good-pct">0%</div>
+                        </div>
+                        <div class="stat-card stat-card-rating">
+                            <div class="stat-icon orange">
+                                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="stat-requires">0</div>
+                                <div class="stat-label">Requires Improvement</div>
+                            </div>
+                            <div class="stat-pct" id="stat-requires-pct">0%</div>
+                        </div>
+                        <div class="stat-card stat-card-rating">
+                            <div class="stat-icon red">
+                                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="stat-inadequate">0</div>
+                                <div class="stat-label">Inadequate</div>
+                            </div>
+                            <div class="stat-pct" id="stat-inadequate-pct">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row: Rating Distribution Donut + Regional Breakdown -->
+                <div class="charts-grid">
+                    <div class="card analytics-card">
+                        <div class="card-header">
+                            <h3>Rating Distribution</h3>
+                            <span class="card-subtitle">All facilities</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container donut-container"
+                                style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                                <canvas id="rating-donut-chart"></canvas>
+                            </div>
+                            <div class="chart-legend" id="rating-donut-legend"></div>
+                        </div>
+                    </div>
+                    <div class="card analytics-card">
+                        <div class="card-header">
+                            <h3>Regional Breakdown</h3>
+                            <button class="btn-icon" id="regional-sort-btn" title="Toggle sort order">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 7a1 1 0 000 2h7a1 1 0 100-2H3zM3 11a1 1 0 100 2h4a1 1 0 100-2H3zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="regional-breakdown-chart" id="regional-breakdown-bars"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outstanding Facilities -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Outstanding Facilities</h3>
+                        <a href="#" class="link" onclick="CRMApp.switchView('list'); return false;">View all →</a>
+                    </div>
+                    <div class="card-body">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Facility</th>
+                                    <th>Location</th>
+                                    <th>Provider</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outstanding-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                <div class="section-divider">
+                    <h2>Analytics Overview</h2>
+                </div>
+
+                <!-- Charts Row: Donut + Rating by Region -->
+                <div class="charts-grid">
+                    <div class="card analytics-card">
+                        <div class="card-header">
+                            <h3>Rating Breakdown</h3>
+                            <span class="card-subtitle" id="home-donut-subtitle">All care homes</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container donut-container">
+                                <canvas id="home-rating-donut-chart"></canvas>
+                            </div>
+                            <div class="chart-legend" id="home-donut-legend"></div>
+                        </div>
+                    </div>
+                    <div class="card analytics-card">
+                        <div class="card-header">
+                            <h3>Ratings by Region</h3>
+                            <div class="chart-view-toggle">
+                                <button class="view-btn active" data-view="stacked" data-chart="home">Stacked</button>
+                                <button class="view-btn" data-view="grouped" data-chart="home">Grouped</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container bar-container">
+                                <canvas id="home-region-ratings-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Regional Breakdown + Top Providers -->
+                <div class="charts-grid">
+                    <div class="card analytics-card">
+                        <div class="card-header">
+                            <h3>Regional Breakdown</h3>
+                            <button class="btn-icon sort-btn" id="home-sort-regions-btn" title="Sort">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zm0 4a1 1 0 000 2h7a1 1 0 100-2H3zm0 4a1 1 0 100 2h4a1 1 0 100-2H3z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="regional-bars" id="home-regional-bars"></div>
+                        </div>
+                    </div>
+                    <div class="card analytics-card">
+                        <div class="card-header">
+                            <h3>Top Providers</h3>
+                            <span class="card-subtitle">By facility count</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="providers-table" id="home-top-providers-table"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- List View -->
+            <section id="list-view" class="view">
+                <header class="view-header">
+                    <div>
+                        <h1>All Facilities</h1>
+                        <p class="subtitle" id="list-count">0 facilities</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="tabs">
+                            <button class="tab active" data-filter="">All</button>
+                            <button class="tab" data-filter="Outstanding">Outstanding</button>
+                            <button class="tab" data-filter="Good">Good</button>
+                            <button class="tab" data-filter="Requires improvement">Requires Improvement</button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="card">
+                    <table class="data-table full">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox"></th>
+                                <th>Facility Name</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Provider</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facilities-table"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" id="pagination"></div>
+            </section>
+
+            <!-- Map View -->
+            <section id="map-view" class="view">
+                <header class="view-header compact">
+                    <div>
+                        <h1>UK Facilities Map</h1>
+                        <p class="subtitle">
+                            <span class="dot green"></span> Outstanding
+                            <span class="dot blue"></span> Good
+                            <span class="dot orange"></span> Requires Improvement
+                            <span class="dot red"></span> Inadequate
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <input type="text" id="map-search" placeholder="Search location...">
+                        </div>
+                    </div>
+                </header>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </section>
+
+            <!-- Providers View -->
+            <section id="providers-view" class="view">
+                <header class="view-header">
+                    <div>
+                        <h1>Providers</h1>
+                        <p class="subtitle" id="providers-subtitle">0 providers managing facilities</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-box">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <input type="text" id="provider-search" placeholder="Search providers...">
+                        </div>
+                        <div class="multi-select-dropdown" id="provider-count-filter">
+                            <button class="multi-select-trigger" type="button">
+                                <span class="multi-select-label">All Providers</span>
+                                <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <div class="multi-select-menu">
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="1-2"> 1-2 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="3-5"> 3-5 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="6-10"> 6-10 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="11-15"> 11-15 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="16-20"> 16-20 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="21-30"> 21-30 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="31-40"> 31-40 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="41-50"> 41-50 Properties
+                                </label>
+                                <label class="multi-select-item">
+                                    <input type="checkbox" value="50+"> 50+ Properties
+                                </label>
+                            </div>
+                        </div>
+                        <select id="provider-region-filter" class="provider-filter-select">
+                            <option value="">All Regions</option>
+                        </select>
+                    </div>
+                </header>
+
+                <div class="providers-grid" id="providers-grid"></div>
+
+                <div class="pagination" id="providers-pagination"></div>
+            </section>
+        </main>
+
+        <!-- Detail Panel -->
+        <aside id="detail-panel" class="detail-panel">
+            <div class="detail-header">
+                <h2 id="detail-title">Facility Details</h2>
+                <button class="btn-close" onclick="CRMApp.closeDetail()">×</button>
+            </div>
+            <div class="detail-body" id="detail-body"></div>
+        </aside>
+    </div>
+
+    <!-- Login Page -->
+    <div id="login-page" class="login-page">
+        <div class="login-container">
+            <div class="login-logo">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                    <rect width="24" height="24" rx="6" fill="#10b981" />
+                    <path d="M7 12l3 3 7-7" stroke="white" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+                <h1>CompliantCare</h1>
+                <p>Healthcare Facility CRM</p>
+            </div>
+            <form id="login-form" class="login-form">
+                <div id="auth-error" class="auth-error"></div>
+                <div class="form-group">
+                    <label for="auth-email">Email</label>
+                    <input type="email" id="auth-email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="auth-password">Password</label>
+                    <input type="password" id="auth-password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-login" id="login-btn">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Provider Detail Modal -->
+    <div id="provider-detail-modal" class="modal-overlay provider-modal-overlay">
+        <div class="modal provider-detail-modal">
+            <div class="modal-header">
+                <div class="provider-modal-title">
+                    <h3 id="provider-modal-name">Provider Name</h3>
+                    <span class="provider-modal-count" id="provider-modal-count">0 properties</span>
+                    <div class="provider-company-info" id="provider-company-info" style="display:none;"></div>
+                </div>
+                <button class="btn-close" onclick="CRMApp.closeProviderDetail()">×</button>
+            </div>
+            <div class="modal-body provider-modal-body">
+                <div class="provider-modal-content">
+                    <div class="provider-modal-left">
+                        <!-- Enrichment Section -->
+                        <div class="provider-enrichment-section" id="provider-enrichment-section">
+                            <div class="enrichment-actions">
+                                <button class="btn btn-primary btn-find-directors" id="provider-find-directors-btn"
+                                    onclick="CRMApp.enrichProvider()">
+                                    <svg class="btn-icon-svg" width="16" height="16" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path
+                                            d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                    </svg>
+                                    <span class="btn-text">Find Directors</span>
+                                    <span class="btn-spinner" style="display:none;">
+                                        <svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10" stroke-opacity="0.25" />
+                                            <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round" />
+                                        </svg>
+                                    </span>
+                                </button>
+                                <a href="#" class="btn btn-secondary btn-website" id="provider-website-btn"
+                                    target="_blank" style="display:none;">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    Visit Website
+                                </a>
+                                <a href="#" class="btn btn-secondary btn-companies-house" id="provider-ch-btn"
+                                    target="_blank" style="display:none;">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm6 6H7v2h6v-2z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    Companies House
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Directors Section -->
+                        <div class="provider-directors-section" id="provider-directors-section" style="display:none;">
+                            <h4>
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                </svg>
+                                Directors
+                            </h4>
+                            <div class="directors-list" id="provider-directors-list"></div>
+                        </div>
+
+                        <div class="provider-stats-summary" id="provider-stats-summary"></div>
+                        <div class="provider-properties-section">
+                            <h4>Managed Properties</h4>
+                            <div class="provider-properties-list" id="provider-properties-list"></div>
+                        </div>
+                    </div>
+                    <div class="provider-modal-right">
+                        <h4>Property Locations</h4>
+                        <div class="provider-mini-map" id="provider-mini-map"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/data.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/app.js"></script>
+</body>
+
+</html>
