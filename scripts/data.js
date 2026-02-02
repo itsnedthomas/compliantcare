@@ -110,50 +110,49 @@ var DataHandler = {
         var self = this;
 
         try {
+            // Phase 1: Load pre-aggregated stats instantly (< 1 second)
+            if (statusEl) statusEl.textContent = 'Loading dashboard...';
+            if (progressEl) progressEl.style.width = '20%';
+
+            await this.loadDashboardStats();
+            await this.loadRegionalStats();
+
+            if (progressEl) progressEl.style.width = '40%';
+            if (statusEl) statusEl.textContent = 'Dashboard ready!';
+
             // Initialize IndexedDB
             await this.initDB();
 
-            // Step 1: Try to load from cache first (instant!)
+            // Phase 2: Check cache for full facility data
             var cachedData = await this.loadFromCache();
 
             if (cachedData && cachedData.length > 0) {
                 console.log('Found cached data:', cachedData.length, 'records');
+                if (statusEl) statusEl.textContent = 'Loading facilities...';
+                if (progressEl) progressEl.style.width = '70%';
 
-                // Show cache loading status
-                if (statusEl) statusEl.textContent = 'Loading from cache...';
-                if (progressEl) progressEl.style.width = '50%';
-
-                // Process cached data immediately
                 this.processRawData(cachedData);
 
                 if (progressEl) progressEl.style.width = '100%';
                 if (statusEl) statusEl.textContent = 'Ready!';
-                if (countEl) countEl.textContent = cachedData.length.toLocaleString() + ' records (cached)';
+                if (countEl) countEl.textContent = cachedData.length.toLocaleString() + ' records';
 
-                // Check if cache is stale and refresh in background
+                // Background refresh if stale
                 var cacheAge = await this.getCacheAge();
                 if (cacheAge > this.CACHE_MAX_AGE_MS) {
-                    console.log('Cache is stale (' + Math.round(cacheAge / 60000) + ' minutes old), refreshing in background...');
+                    console.log('Cache stale, refreshing in background...');
                     this.refreshCacheInBackground();
                 }
-
                 return true;
             }
 
-            // No cache - do a full fetch
-            console.log('No cache found, fetching from API...');
-            var allData = await this.fetchAllFacilities(progressEl, countEl, statusEl);
-
-            // Save to cache (async, don't wait)
-            this.saveToCache(allData);
-
-            // Process the data
-            this.processRawData(allData);
-
-            // Final progress update
+            // No cache - load full data in background, but show dashboard immediately
             if (progressEl) progressEl.style.width = '100%';
-            if (statusEl) statusEl.textContent = 'Ready!';
-            if (countEl) countEl.textContent = allData.length.toLocaleString() + ' records loaded';
+            if (statusEl) statusEl.textContent = 'Ready! (Loading full data...)';
+            if (countEl) countEl.textContent = this.stats.total.toLocaleString() + ' facilities';
+
+            // Start background fetch without blocking
+            this.loadFullDataInBackground(countEl, statusEl);
 
             return true;
 
@@ -161,6 +160,77 @@ var DataHandler = {
             console.error('DataHandler.init() error:', error);
             throw error;
         }
+    },
+
+    // Load pre-aggregated dashboard stats (instant - single row)
+    loadDashboardStats: async function () {
+        try {
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/dashboard_stats?select=*',
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    }
+                }
+            );
+            if (response.ok) {
+                var data = await response.json();
+                if (data && data[0]) {
+                    this.stats = {
+                        total: data[0].total || 0,
+                        careHomes: data[0].care_homes || 0,
+                        outstanding: data[0].outstanding || 0,
+                        good: data[0].good || 0,
+                        requiresImprovement: data[0].requires_improvement || 0,
+                        inadequate: data[0].inadequate || 0
+                    };
+                    console.log('Loaded dashboard stats:', this.stats);
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load dashboard stats:', e);
+        }
+    },
+
+    // Load pre-aggregated regional stats (instant - 10 rows)
+    loadRegionalStats: async function () {
+        try {
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/regional_stats?select=*',
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    }
+                }
+            );
+            if (response.ok) {
+                var data = await response.json();
+                this.regionalStats = data || [];
+                console.log('Loaded regional stats:', this.regionalStats.length, 'regions');
+            }
+        } catch (e) {
+            console.warn('Failed to load regional stats:', e);
+        }
+    },
+
+    // Load full facility data in background (doesn't block UI)
+    loadFullDataInBackground: function (countEl, statusEl) {
+        var self = this;
+        setTimeout(async function () {
+            try {
+                console.log('Starting background data load...');
+                var allData = await self.fetchAllFacilities(null, countEl, null);
+                self.saveToCache(allData);
+                self.processRawData(allData);
+                if (statusEl) statusEl.textContent = 'Ready!';
+                if (countEl) countEl.textContent = allData.length.toLocaleString() + ' records loaded';
+                console.log('Background data load complete');
+            } catch (e) {
+                console.warn('Background data load failed:', e);
+            }
+        }, 100);
     },
 
     loadFromCache: async function () {

@@ -80,3 +80,8 @@ Estimated time for batch: 1.7 minutes
 [100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 0.9/sec | ETA: 16.6 min
 [200/1000] (20.0%) | Success: 200 | Failed: 0 | Rate: 0.9/sec | ETA: 14.8 min
 [300/1000] (30.0%) | Success: 300 | Failed: 0 | Rate: 0.9/sec | ETA: 13.3 min
+[400/1000] (40.0%) | Success: 400 | Failed: 0 | Rate: 0.8/sec | ETA: 12.1 min
+[500/1000] (50.0%) | Success: 500 | Failed: 0 | Rate: 0.8/sec | ETA: 10.8 min
+[600/1000] (60.0%) | Success: 600 | Failed: 0 | Rate: 0.8/sec | ETA: 8.8 min
+[700/1000] (70.0%) | Success: 700 | Failed: 0 | Rate: 0.8/sec | ETA: 6.5 min
+[800/1000] (80.0%) | Success: 800 | Failed: 0 | Rate: 0.8/sec | ETA: 4.3 min

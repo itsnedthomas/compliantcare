@@ -241,10 +241,19 @@ var CRMApp = {
     },
 
     renderDashboard: function () {
-        // Calculate stats from filtered facilities for global filter support
+        // Use pre-loaded stats if full data not yet available
         var facilities = this.getGlobalFilteredFacilities();
-        var stats = this.calculateFilteredStats(facilities);
-        console.log('Rendering dashboard with filtered stats:', stats);
+        var stats;
+
+        if (facilities.length === 0 && DataHandler.stats.total > 0) {
+            // Use pre-aggregated stats from server (instant load)
+            stats = DataHandler.stats;
+            console.log('Rendering dashboard with pre-loaded stats:', stats);
+        } else {
+            // Calculate from loaded facilities (for global filter support)
+            stats = this.calculateFilteredStats(facilities);
+            console.log('Rendering dashboard with calculated stats:', stats);
+        }
 
         // Animate stats
         this.animateValue('stat-total', stats.total);
@@ -261,7 +270,7 @@ var CRMApp = {
         this.updateStatPct('stat-inadequate-pct', stats.inadequate, total);
 
         // Render interactive Chart.js charts - Dashboard main charts
-        this.renderDashboardDonut(facilities);
+        this.renderDashboardDonut(facilities, stats);
         this.renderDashboardRegionalBars(facilities);
         this.setupDashboardChartControls();
 
@@ -272,7 +281,7 @@ var CRMApp = {
         this.renderSparklines();
 
         // Homepage analytics section (below Outstanding table)
-        this.renderHomeDonutChart(facilities);
+        this.renderHomeDonutChart(facilities, stats);
         this.renderHomeRegionRatingsChart(facilities);
         this.renderHomeRegionalBars(facilities);
         this.renderHomeTopProviders(facilities);
@@ -313,12 +322,25 @@ var CRMApp = {
     dashboardDonutChart: null,
     dashboardRegionSortAsc: true,
 
-    renderDashboardDonut: function (data) {
+    renderDashboardDonut: function (data, stats) {
         var ctx = document.getElementById('rating-donut-chart');
         if (!ctx) return;
 
-        var counts = this.getRatingCounts(data);
-        var total = data.length || 1;
+        // Use stats if provided, otherwise calculate from data
+        var counts;
+        var total;
+        if (stats && stats.total > 0) {
+            counts = {
+                outstanding: stats.outstanding,
+                good: stats.good,
+                requires: stats.requiresImprovement,
+                inadequate: stats.inadequate
+            };
+            total = stats.total;
+        } else {
+            counts = this.getRatingCounts(data);
+            total = data.length || 1;
+        }
 
         // Destroy existing chart
         if (this.dashboardDonutChart) {
@@ -776,11 +798,25 @@ var CRMApp = {
     homeAnalyticsCharts: {},
     homeRegionSortAsc: true,
 
-    renderHomeDonutChart: function (data) {
+    renderHomeDonutChart: function (data, stats) {
         var ctx = document.getElementById('home-rating-donut-chart');
         if (!ctx) return;
 
-        var counts = this.getRatingCounts(data);
+        // Use stats if provided, otherwise calculate from data
+        var counts;
+        var total;
+        if (stats && stats.total > 0) {
+            counts = {
+                outstanding: stats.outstanding,
+                good: stats.good,
+                requires: stats.requiresImprovement,
+                inadequate: stats.inadequate
+            };
+            total = stats.total;
+        } else {
+            counts = this.getRatingCounts(data);
+            total = data.length || 1;
+        }
 
         // Destroy existing chart
         if (this.homeAnalyticsCharts.donut) {
@@ -828,7 +864,7 @@ var CRMApp = {
             var colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'];
             var labels = ['Outstanding', 'Good', 'Requires Improvement', 'Inadequate'];
             var values = [counts.outstanding, counts.good, counts.requires, counts.inadequate];
-            var total = data.length || 1;
+            var legendTotal = total || 1;
 
             legendContainer.innerHTML = labels.map(function (label, i) {
                 var pct = Math.round((values[i] / total) * 100);
