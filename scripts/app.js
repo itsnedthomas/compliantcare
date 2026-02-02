@@ -196,6 +196,8 @@ var CRMApp = {
         else if (view === 'map') this.initMap();
         else if (view === 'analytics') this.renderAnalytics();
         else if (view === 'providers') this.renderProvidersView();
+        else if (view === 'pipeline' && typeof PipelineView !== 'undefined') PipelineView.onViewActivate();
+        else if (view === 'enrichment' && typeof EnrichmentStatus !== 'undefined') EnrichmentStatus.init();
     },
 
     setupSearch: function () {
@@ -1068,13 +1070,35 @@ var CRMApp = {
             var ratingClass = (f.overallRating || '').toLowerCase().replace(/\s+/g, '-');
             if (ratingClass === 'requires-improvement') ratingClass = 'requires';
 
+            // Build mini ratings dots HTML
+            var miniRatings = '';
+            if (f.ratings && (f.ratings.safe || f.ratings.caring)) {
+                miniRatings = '<div class="mini-ratings">';
+                ['safe', 'effective', 'caring', 'responsive', 'wellLed'].forEach(function (key) {
+                    var r = f.ratings[key];
+                    var rClass = r ? r.toLowerCase().replace(/\s+/g, '-') : 'not-rated';
+                    if (rClass === 'requires-improvement') rClass = 'requires';
+                    miniRatings += '<span class="mini-rating-dot ' + rClass + '" title="' + key + ': ' + (r || 'N/A') + '"></span>';
+                });
+                miniRatings += '</div>';
+            }
+
+            // Manager and beds info
+            var extraInfo = '';
+            if (f.registeredManager || f.beds) {
+                extraInfo = '<div class="facility-extra">';
+                if (f.registeredManager) extraInfo += '<span class="manager-small">👤 ' + f.registeredManager.split(' ').slice(0, 3).join(' ') + '</span>';
+                if (f.beds) extraInfo += '<span class="beds-small">🛏️ ' + f.beds + '</span>';
+                extraInfo += '</div>';
+            }
+
             html += '<tr onclick="CRMApp.showDetail(\'' + f.id + '\')">' +
                 '<td><input type="checkbox" onclick="event.stopPropagation()"></td>' +
-                '<td><div class="facility-name">' + (f.name || 'Unknown') + '</div><div class="facility-meta">' + (f.id || '') + '</div></td>' +
+                '<td><div class="facility-name">' + (f.name || 'Unknown') + '</div>' + miniRatings + extraInfo + '</td>' +
                 '<td><span class="badge ' + ratingClass + '">' + (f.overallRating || 'Not Rated') + '</span></td>' +
                 '<td>' + (f.address ? (f.address.city || '') + ' ' + (f.address.postcode || '') : '') + '</td>' +
                 '<td>' + (f.provider ? f.provider.name || 'N/A' : 'N/A') + '</td>' +
-                '<td>' + (f.isCareHome ? 'Care Home' : 'Facility') + '</td>' +
+                '<td>' + (f.isCareHome ? 'Care Home' : 'Property') + '</td>' +
                 '</tr>';
         });
 
@@ -1975,10 +1999,53 @@ var CRMApp = {
         }
 
         if (body) {
+            // Build ratings breakdown HTML if available
+            var ratingsHtml = '';
+            if (facility.ratings && (facility.ratings.safe || facility.ratings.caring)) {
+                var ratingItems = [
+                    { key: 'safe', label: 'Safe' },
+                    { key: 'effective', label: 'Effective' },
+                    { key: 'caring', label: 'Caring' },
+                    { key: 'responsive', label: 'Responsive' },
+                    { key: 'wellLed', label: 'Well-led' }
+                ];
+                ratingsHtml = '<div class="ratings-breakdown">';
+                ratingItems.forEach(function (item) {
+                    var rating = facility.ratings[item.key];
+                    var rClass = rating ? rating.toLowerCase().replace(/\s+/g, '-') : 'not-rated';
+                    if (rClass === 'requires-improvement') rClass = 'requires';
+                    ratingsHtml += '<div class="rating-item"><span class="rating-label">' + item.label + '</span><span class="rating-dot ' + rClass + '"></span><span class="rating-value">' + (rating || 'N/A') + '</span></div>';
+                });
+                ratingsHtml += '</div>';
+            }
+
+            // Format last inspection date
+            var inspectionDisplay = 'N/A';
+            if (facility.lastInspection) {
+                try {
+                    var d = new Date(facility.lastInspection);
+                    if (!isNaN(d.getTime())) {
+                        inspectionDisplay = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    }
+                } catch (e) { inspectionDisplay = facility.lastInspection; }
+            }
+
             body.innerHTML =
                 '<div class="detail-section">' +
-                '<h4>Rating</h4>' +
-                '<span class="badge ' + ratingClass + '">' + (facility.overallRating || 'Not Rated') + '</span>' +
+                '<h4>Overall Rating</h4>' +
+                '<span class="badge ' + ratingClass + ' large">' + (facility.overallRating || 'Not Rated') + '</span>' +
+                '</div>' +
+
+                (ratingsHtml ? '<div class="detail-section"><h4>Ratings Breakdown</h4>' + ratingsHtml + '</div>' : '') +
+
+                (facility.registeredManager ? '<div class="detail-section"><h4>Registered Manager</h4><p class="manager-name">👤 ' + facility.registeredManager + '</p></div>' : '') +
+
+                (facility.nominatedIndividual ? '<div class="detail-section"><h4>Responsible Person</h4><p class="manager-name">👔 ' + facility.nominatedIndividual + '</p></div>' : '') +
+
+                '<div class="detail-section contact-section">' +
+                (facility.phone ? '<a href="tel:' + facility.phone + '" class="contact-link">📞 ' + facility.phone + '</a>' : '') +
+                (facility.website ? '<a href="https://' + facility.website.replace(/^https?:\/\//, '') + '" target="_blank" class="contact-link">🌐 ' + facility.website + '</a>' : '') +
+                (facility.beds ? '<span class="beds-badge">🛏️ ' + facility.beds + ' beds</span>' : '') +
                 '</div>' +
 
                 '<div class="detail-section">' +
@@ -1992,28 +2059,17 @@ var CRMApp = {
                 '</div>' +
 
                 '<div class="detail-section">' +
-                '<h4>Domain</h4>' +
-                '<span class="detail-chip">' + (facility.domain || 'N/A') + '</span>' +
-                '</div>' +
-
-                '<div class="detail-section">' +
-                '<h4>Publication Date</h4>' +
-                '<span class="detail-chip">' + pubDateDisplay + '</span>' +
-                '</div>' +
-
-                '<div class="detail-section">' +
                 '<h4>Provider</h4>' +
                 '<span class="detail-chip provider-chip">' + (facility.provider ? facility.provider.name || 'N/A' : 'N/A') + '</span>' +
                 '</div>' +
 
-                '<div class="detail-section">' +
-                '<h4>Type</h4>' +
-                '<span class="detail-chip">' + (facility.isCareHome ? 'Care Home' : (facility.locationType || 'Facility')) + '</span>' +
+                '<div class="detail-section info-row">' +
+                '<div class="info-item"><span class="info-label">Last Inspection</span><span class="info-value">' + inspectionDisplay + '</span></div>' +
+                '<div class="info-item"><span class="info-label">Type</span><span class="info-value">' + (facility.isCareHome ? 'Care Home' : (facility.locationType || 'Facility')) + '</span></div>' +
                 '</div>' +
 
                 '<div class="detail-section">' +
-                '<h4>CQC Details</h4>' +
-                '<a href="https://www.cqc.org.uk/location/' + facility.id + '" target="_blank" class="detail-link">View on CQC →</a>' +
+                '<a href="https://www.cqc.org.uk/location/' + facility.id + '" target="_blank" class="btn btn-primary btn-cqc">View Full CQC Report →</a>' +
                 '</div>';
 
             // Initialize mini map if coordinates are available
@@ -2459,20 +2515,46 @@ var CRMApp = {
         var directorsSection = document.getElementById('provider-directors-section');
         var directorsList = document.getElementById('provider-directors-list');
         var findDirectorsBtn = document.getElementById('provider-find-directors-btn');
+        var niSection = document.getElementById('provider-ni-section');
+        var niNameEl = document.getElementById('ni-name');
+        var niLinkedInBtn = document.getElementById('ni-linkedin-btn');
+        var viewMoreBtn = document.getElementById('view-more-directors-btn');
+        var hiddenCount = document.getElementById('hidden-directors-count');
 
         // Store current provider for enrichProvider function
         this.currentProvider = provider;
+        this.directorsExpanded = false;
 
         // Reset visibility
         if (websiteBtn) websiteBtn.style.display = 'none';
         if (chBtn) chBtn.style.display = 'none';
         if (directorsSection) directorsSection.style.display = 'none';
+        if (niSection) niSection.style.display = 'none';
+        if (viewMoreBtn) viewMoreBtn.style.display = 'none';
         if (findDirectorsBtn) {
             findDirectorsBtn.style.display = 'inline-flex';
             findDirectorsBtn.disabled = false;
             var btnText = findDirectorsBtn.querySelector('.btn-text');
             if (btnText) btnText.textContent = 'Find Directors';
             findDirectorsBtn.classList.remove('btn-success');
+        }
+
+        // Display Nominated Individual from facilities
+        var nominatedIndividual = null;
+        provider.facilities.forEach(function (f) {
+            if (f['Nominated Individual Name'] && !nominatedIndividual) {
+                nominatedIndividual = f['Nominated Individual Name'];
+            }
+        });
+
+        if (nominatedIndividual && niSection && niNameEl && niLinkedInBtn) {
+            niNameEl.textContent = nominatedIndividual;
+            // Generate Google search URL for LinkedIn
+            var searchQuery = '"' + nominatedIndividual + '" "' + provider.name + '" site:linkedin.com';
+            niLinkedInBtn.href = 'https://www.google.com/search?q=' + encodeURIComponent(searchQuery);
+            niSection.style.display = 'block';
+            // Store for enrichment
+            this.currentNominatedIndividual = nominatedIndividual;
         }
 
         // Check first facility for enriched data (all should share provider data)
@@ -2533,21 +2615,21 @@ var CRMApp = {
                 // Directors section - filter out secretaries, sort by appointment date
                 if (data.directors && Array.isArray(data.directors) && data.directors.length > 0 && directorsSection && directorsList) {
                     // Filter to only directors (exclude secretaries)
-                    var directors = data.directors.filter(function(d) {
+                    var directors = data.directors.filter(function (d) {
                         var role = (d.role || d.officer_role || '').toLowerCase();
                         // Exclude any role containing 'secretary'
                         if (role.indexOf('secretary') > -1) return false;
                         // Include only roles containing 'director'
                         return role.indexOf('director') > -1;
                     });
-                    
+
                     // Sort by appointment date (earliest first = top)
-                    directors.sort(function(a, b) {
+                    directors.sort(function (a, b) {
                         var dateA = new Date(a.appointed_on || a.appointed || '9999-12-31');
                         var dateB = new Date(b.appointed_on || b.appointed || '9999-12-31');
                         return dateA - dateB;
                     });
-                    
+
                     var directorsHtml = '';
                     directors.forEach(function (director, index) {
                         var rank = index + 1;
@@ -2555,20 +2637,20 @@ var CRMApp = {
                         var appointedDate = director.appointed_on || director.appointed;
                         var roleDisplay = 'Director' + (appointedDate ? ' - ' + self.formatDate(appointedDate) : '');
                         var directorId = 'director-' + index;
-                        
+
                         // Check if director has cached enrichment data
                         var hasEnrichedEmail = director.enriched_email !== undefined;
                         var hasEnrichedPhone = director.enriched_phone !== undefined;
                         var isEnriched = hasEnrichedEmail || hasEnrichedPhone;
-                        
+
                         // Phone display
                         var phoneClass = isEnriched ? (director.enriched_phone ? 'contact-found' : 'contact-not-found') : 'contact-blurred';
                         var phoneText = isEnriched ? (director.enriched_phone || 'Not found') : '••••••••••';
-                        
+
                         // Email display
                         var emailClass = isEnriched ? (director.enriched_email ? 'contact-found' : 'contact-not-found') : 'contact-blurred';
                         var emailText = isEnriched ? (director.enriched_email || 'Not found') : '••••••••••••••';
-                        
+
                         directorsHtml += '<div class="director-item" id="' + directorId + '" data-director-name="' + self.escapeHtml(director.name) + '">' +
                             '<div class="director-rank">' + rank + '</div>' +
                             '<div class="director-avatar">' + initials + '</div>' +
@@ -2592,6 +2674,19 @@ var CRMApp = {
                     directorsList.innerHTML = directorsHtml;
                     directorsSection.style.display = 'block';
                     hasEnrichmentData = true;
+
+                    // Limit directors to 4 visible, show "View more" button for rest
+                    var MAX_VISIBLE = 4;
+                    if (directors.length > MAX_VISIBLE) {
+                        var items = directorsList.querySelectorAll('.director-item');
+                        for (var i = MAX_VISIBLE; i < items.length; i++) {
+                            items[i].classList.add('hidden-director');
+                        }
+                        if (viewMoreBtn && hiddenCount) {
+                            hiddenCount.textContent = directors.length - MAX_VISIBLE;
+                            viewMoreBtn.style.display = 'block';
+                        }
+                    }
                 }
 
                 // Hide Find Directors button if data already exists
@@ -2609,6 +2704,113 @@ var CRMApp = {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     },
 
+    toggleDirectorsList: function () {
+        var directorsList = document.getElementById('provider-directors-list');
+        var viewMoreBtn = document.getElementById('view-more-directors-btn');
+        var hiddenCount = document.getElementById('hidden-directors-count');
+
+        if (!directorsList) return;
+
+        this.directorsExpanded = !this.directorsExpanded;
+        var items = directorsList.querySelectorAll('.director-item.hidden-director');
+
+        items.forEach(function (item) {
+            if (this.directorsExpanded) {
+                item.classList.add('show');
+            } else {
+                item.classList.remove('show');
+            }
+        }.bind(this));
+
+        if (viewMoreBtn) {
+            viewMoreBtn.textContent = this.directorsExpanded ? 'Show less' : ('View ' + hiddenCount.textContent + ' more');
+        }
+    },
+
+    enrichNominatedIndividual: function () {
+        var self = this;
+        var btn = document.getElementById('ni-enrich-btn');
+        var btnText = btn ? btn.querySelector('.btn-text') : null;
+        var btnSpinner = btn ? btn.querySelector('.btn-spinner') : null;
+        var contactDetails = document.getElementById('ni-contact-details');
+
+        if (!this.currentProvider || !this.currentNominatedIndividual) {
+            console.error('No current provider or nominated individual');
+            return;
+        }
+
+        var companyName = this.currentProvider.name;
+        var personName = this.currentNominatedIndividual;
+        var providerId = this.currentProvider.id.replace('provider-', '');
+
+        // Show loading state
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.textContent = 'Enriching...';
+        if (btnSpinner) btnSpinner.style.display = 'inline-flex';
+
+        // Call the enrich-director Edge Function (works for any person)
+        fetch('https://qdrbwvxqtgwjgitcambn.supabase.co/functions/v1/enrich-director', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                directorName: personName,
+                companyName: companyName,
+                providerId: providerId
+            })
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (btnSpinner) btnSpinner.style.display = 'none';
+
+                if (data.success && (data.email || data.phone)) {
+                    // Show contact details
+                    if (contactDetails) {
+                        var html = '';
+                        if (data.email) {
+                            html += '<div class="contact-row">' +
+                                '<span class="contact-label">Email</span>' +
+                                '<a href="mailto:' + data.email + '" class="contact-value">' + data.email + '</a>' +
+                                '</div>';
+                        }
+                        if (data.phone) {
+                            html += '<div class="contact-row">' +
+                                '<span class="contact-label">Phone</span>' +
+                                '<a href="tel:' + data.phone + '" class="contact-value">' + data.phone + '</a>' +
+                                '</div>';
+                        }
+                        if (data.linkedin_url) {
+                            html += '<div class="contact-row">' +
+                                '<span class="contact-label">LinkedIn</span>' +
+                                '<a href="' + data.linkedin_url + '" target="_blank" class="contact-value">View Profile</a>' +
+                                '</div>';
+                        }
+                        contactDetails.innerHTML = html;
+                        contactDetails.style.display = 'block';
+                    }
+
+                    if (btnText) btnText.textContent = 'Enriched!';
+                    btn.classList.add('btn-success');
+                } else {
+                    if (btnText) btnText.textContent = 'Not Found';
+                    setTimeout(function () {
+                        if (btnText) btnText.textContent = 'Enrich Contact';
+                        if (btn) btn.disabled = false;
+                    }, 2000);
+                }
+            })
+            .catch(function (error) {
+                console.error('NI Enrichment error:', error);
+                if (btnText) btnText.textContent = 'Error';
+                if (btnSpinner) btnSpinner.style.display = 'none';
+                if (btn) btn.disabled = false;
+                setTimeout(function () {
+                    if (btnText) btnText.textContent = 'Enrich Contact';
+                }, 2000);
+            });
+    },
+
     formatDate: function (dateStr) {
         if (!dateStr) return '';
         try {
@@ -2622,42 +2824,42 @@ var CRMApp = {
 
     enrichDirector: function (directorName) {
         var self = this;
-        
+
         // Find the director card by data attribute
         var directorCards = document.querySelectorAll('.director-item[data-director-name]');
         var directorCard = null;
-        directorCards.forEach(function(card) {
+        directorCards.forEach(function (card) {
             if (card.getAttribute('data-director-name') === directorName) {
                 directorCard = card;
             }
         });
-        
+
         if (!directorCard) {
             console.error('Director card not found:', directorName);
             return;
         }
-        
+
         var findBtn = directorCard.querySelector('.director-find-btn');
         var phoneEl = directorCard.querySelector('.contact-value[data-type="phone"]');
         var emailEl = directorCard.querySelector('.contact-value[data-type="email"]');
-        
+
         if (!findBtn) return;
-        
+
         // Get company name from current provider
         var companyName = this.currentProvider ? (this.currentProvider['Provider Name'] || this.currentProvider.name) : '';
         if (!companyName) {
             console.error('No company name available');
             return;
         }
-        
+
         // Show loading state
         var originalBtnText = findBtn.innerHTML;
         findBtn.innerHTML = '<span class="btn-spinner"></span> Loading...';
         findBtn.disabled = true;
-        
+
         // Get provider ID from current provider
         var providerId = this.currentProvider ? (this.currentProvider.id || '').replace('provider-', '') : '';
-        
+
         // Call the Edge Function
         fetch('https://qdrbwvxqtgwjgitcambn.supabase.co/functions/v1/enrich-director', {
             method: 'POST',
@@ -2670,56 +2872,56 @@ var CRMApp = {
                 providerId: providerId
             })
         })
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            if (data.success) {
-                // Update phone
-                if (phoneEl) {
-                    phoneEl.textContent = data.phone || 'Not found';
-                    phoneEl.classList.remove('contact-blurred');
-                    if (data.phone) {
-                        phoneEl.classList.add('contact-found');
-                    } else {
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data.success) {
+                    // Update phone
+                    if (phoneEl) {
+                        phoneEl.textContent = data.phone || 'Not found';
+                        phoneEl.classList.remove('contact-blurred');
+                        if (data.phone) {
+                            phoneEl.classList.add('contact-found');
+                        } else {
+                            phoneEl.classList.add('contact-not-found');
+                        }
+                    }
+
+                    // Update email
+                    if (emailEl) {
+                        emailEl.textContent = data.email || 'Not found';
+                        emailEl.classList.remove('contact-blurred');
+                        if (data.email) {
+                            emailEl.classList.add('contact-found');
+                        } else {
+                            emailEl.classList.add('contact-not-found');
+                        }
+                    }
+
+                    // Hide the find button
+                    findBtn.style.display = 'none';
+                } else {
+                    // No match found
+                    if (phoneEl) {
+                        phoneEl.textContent = 'Not found';
+                        phoneEl.classList.remove('contact-blurred');
                         phoneEl.classList.add('contact-not-found');
                     }
-                }
-                
-                // Update email
-                if (emailEl) {
-                    emailEl.textContent = data.email || 'Not found';
-                    emailEl.classList.remove('contact-blurred');
-                    if (data.email) {
-                        emailEl.classList.add('contact-found');
-                    } else {
+                    if (emailEl) {
+                        emailEl.textContent = 'Not found';
+                        emailEl.classList.remove('contact-blurred');
                         emailEl.classList.add('contact-not-found');
                     }
+                    findBtn.style.display = 'none';
                 }
-                
-                // Hide the find button
-                findBtn.style.display = 'none';
-            } else {
-                // No match found
-                if (phoneEl) {
-                    phoneEl.textContent = 'Not found';
-                    phoneEl.classList.remove('contact-blurred');
-                    phoneEl.classList.add('contact-not-found');
-                }
-                if (emailEl) {
-                    emailEl.textContent = 'Not found';
-                    emailEl.classList.remove('contact-blurred');
-                    emailEl.classList.add('contact-not-found');
-                }
-                findBtn.style.display = 'none';
-            }
-        })
-        .catch(function(error) {
-            console.error('Enrichment error:', error);
-            findBtn.innerHTML = 'Error';
-            findBtn.disabled = false;
-            setTimeout(function() {
-                findBtn.innerHTML = originalBtnText;
-            }, 2000);
-        });
+            })
+            .catch(function (error) {
+                console.error('Enrichment error:', error);
+                findBtn.innerHTML = 'Error';
+                findBtn.disabled = false;
+                setTimeout(function () {
+                    findBtn.innerHTML = originalBtnText;
+                }, 2000);
+            });
     },
 
     enrichProvider: function () {
@@ -2805,21 +3007,21 @@ var CRMApp = {
 
                     if (data.directors && data.directors.length > 0 && directorsSection && directorsList) {
                         // Filter to only directors (exclude secretaries)
-                        var directors = data.directors.filter(function(d) {
+                        var directors = data.directors.filter(function (d) {
                             var role = (d.role || d.officer_role || '').toLowerCase();
                             // Exclude any role containing 'secretary'
                             if (role.indexOf('secretary') > -1) return false;
                             // Include only roles containing 'director'
                             return role.indexOf('director') > -1;
                         });
-                        
+
                         // Sort by appointment date (earliest first = top)
-                        directors.sort(function(a, b) {
+                        directors.sort(function (a, b) {
                             var dateA = new Date(a.appointed_on || a.appointed || '9999-12-31');
                             var dateB = new Date(b.appointed_on || b.appointed || '9999-12-31');
                             return dateA - dateB;
                         });
-                        
+
                         var directorsHtml = '';
                         directors.forEach(function (director, index) {
                             var rank = index + 1;
@@ -2827,7 +3029,7 @@ var CRMApp = {
                             var appointedDate = director.appointed_on || director.appointed;
                             var roleDisplay = 'Director' + (appointedDate ? ' - ' + self.formatDate(appointedDate) : '');
                             var directorId = 'director-enrich-' + index;
-                            
+
                             directorsHtml += '<div class="director-item" id="' + directorId + '" data-director-name="' + self.escapeHtml(director.name) + '">' +
                                 '<div class="director-rank">' + rank + '</div>' +
                                 '<div class="director-avatar">' + initials + '</div>' +

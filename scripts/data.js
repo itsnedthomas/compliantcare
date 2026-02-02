@@ -67,114 +67,263 @@ var DataHandler = {
         inadequate: 257
     },
 
+    // Cache configuration
+    CACHE_KEY: 'compliantcare_facilities_cache',
+    CACHE_TIMESTAMP_KEY: 'compliantcare_cache_timestamp',
+    CACHE_MAX_AGE_MS: 60 * 60 * 1000, // 1 hour cache validity
+
     init: async function () {
         console.log('DataHandler.init() starting...');
 
+        // Get UI elements for progress updates
+        var progressEl = document.getElementById('loading-progress');
+        var countEl = document.getElementById('loading-count');
+        var statusEl = document.getElementById('loading-status');
+        var self = this;
+
         try {
-            // Fetch ALL facilities using pagination (Supabase limits to 1000 per request)
-            var allData = [];
-            var pageSize = 1000;
-            var offset = 0;
-            var hasMore = true;
+            // Step 1: Try to load from cache first (instant!)
+            var cachedData = this.loadFromCache();
 
-            console.log('Fetching all facilities with pagination...');
+            if (cachedData && cachedData.length > 0) {
+                console.log('Found cached data:', cachedData.length, 'records');
 
-            while (hasMore) {
-                var url = SUPABASE_URL + '/rest/v1/facilities?select=*&limit=' + pageSize + '&offset=' + offset;
-                console.log('Fetching page at offset:', offset);
+                // Show cache loading status
+                if (statusEl) statusEl.textContent = 'Loading from cache...';
+                if (progressEl) progressEl.style.width = '50%';
 
-                var response = await fetch(url, {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-                    }
-                });
+                // Process cached data immediately
+                this.processRawData(cachedData);
 
-                if (!response.ok) {
-                    var text = await response.text();
-                    console.error('Error response:', text);
-                    throw new Error('API Error: ' + response.status);
+                if (progressEl) progressEl.style.width = '100%';
+                if (statusEl) statusEl.textContent = 'Ready!';
+                if (countEl) countEl.textContent = cachedData.length.toLocaleString() + ' records (cached)';
+
+                // Check if cache is stale and refresh in background
+                var cacheAge = this.getCacheAge();
+                if (cacheAge > this.CACHE_MAX_AGE_MS) {
+                    console.log('Cache is stale (' + Math.round(cacheAge / 60000) + ' minutes old), refreshing in background...');
+                    this.refreshCacheInBackground();
                 }
 
-                var pageData = await response.json();
-                console.log('Received', pageData.length, 'records at offset', offset);
-
-                if (pageData.length > 0) {
-                    allData = allData.concat(pageData);
-                    offset += pageSize;
-                }
-
-                // Stop if we got fewer than the page size (last page)
-                if (pageData.length < pageSize) {
-                    hasMore = false;
-                }
+                return true;
             }
 
-            var data = allData;
-            console.log('Total records fetched:', data.length);
+            // No cache - do a full fetch
+            console.log('No cache found, fetching from API...');
+            var allData = await this.fetchAllFacilities(progressEl, countEl, statusEl);
 
-            var regionsSet = {};
-            var self = this;
+            // Save to cache
+            this.saveToCache(allData);
 
-            // Transform data
-            this.facilities = data.map(function (f) {
-                var postcode = f['Location Post Code'] || '';
-                var regionCode = f['Location Region'] || '9';
-                var region = UK_REGION_NAMES[regionCode] || 'Unknown';
-                regionsSet[region] = true;
+            // Process the data
+            this.processRawData(allData);
 
-                // Use real geocoded coordinates if available, otherwise fall back to postcode estimation
-                var lat = f.latitude;
-                var lng = f.longitude;
+            // Final progress update
+            if (progressEl) progressEl.style.width = '100%';
+            if (statusEl) statusEl.textContent = 'Ready!';
+            if (countEl) countEl.textContent = allData.length.toLocaleString() + ' records loaded';
 
-                if (!lat || !lng) {
-                    // Fall back to postcode-based estimation
-                    var estimatedCoords = self.getPostcodeCoords(postcode);
-                    if (estimatedCoords) {
-                        lat = estimatedCoords[0];
-                        lng = estimatedCoords[1];
-                    }
-                }
-
-                return {
-                    id: f['Location ID'],
-                    name: f['Location Name'],
-                    isCareHome: f['Care Home?'] === 'Y',
-                    overallRating: f['Latest Rating'],
-                    domain: f['Domain'] || null,
-                    publicationDate: f['Publication Date'] || null,
-                    locationType: f['Location Type'] || null,
-                    address: {
-                        street: f['Location Street Address'],
-                        city: f['Location City'],
-                        postcode: postcode,
-                        region: region,
-                        latitude: lat || null,
-                        longitude: lng || null
-                    },
-                    provider: {
-                        id: f['Provider ID'],
-                        name: f['Provider Name']
-                    },
-                    url: f['URL']
-                };
-            });
-
-            // Build lookup map
-            this.facilities.forEach(function (f) {
-                self.facilitiesMap.set(f.id, f);
-            });
-
-            // Store regions
-            this.regions = Object.keys(regionsSet).sort();
-
-            console.log('DataHandler initialized with', this.facilities.length, 'facilities');
             return true;
 
         } catch (error) {
             console.error('DataHandler.init() error:', error);
             throw error;
         }
+    },
+
+    loadFromCache: function () {
+        try {
+            var cached = localStorage.getItem(this.CACHE_KEY);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+        } catch (e) {
+            console.warn('Cache read error:', e);
+            localStorage.removeItem(this.CACHE_KEY);
+        }
+        return null;
+    },
+
+    getCacheAge: function () {
+        var timestamp = localStorage.getItem(this.CACHE_TIMESTAMP_KEY);
+        if (timestamp) {
+            return Date.now() - parseInt(timestamp, 10);
+        }
+        return Infinity;
+    },
+
+    saveToCache: function (data) {
+        try {
+            localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(this.CACHE_TIMESTAMP_KEY, Date.now().toString());
+            console.log('Saved', data.length, 'records to cache');
+        } catch (e) {
+            console.warn('Cache write error (storage full?):', e);
+            // Try to clear old cache
+            localStorage.removeItem(this.CACHE_KEY);
+        }
+    },
+
+    refreshCacheInBackground: function () {
+        var self = this;
+        setTimeout(async function () {
+            try {
+                console.log('Background refresh starting...');
+                var freshData = await self.fetchAllFacilities(null, null, null);
+                self.saveToCache(freshData);
+                self.processRawData(freshData);
+                console.log('Background refresh complete - data updated');
+            } catch (e) {
+                console.warn('Background refresh failed:', e);
+            }
+        }, 5000); // Start background refresh after 5 seconds
+    },
+
+    fetchAllFacilities: async function (progressEl, countEl, statusEl) {
+        var allData = [];
+        var pageSize = 500;
+        var offset = 0;
+        var hasMore = true;
+        var estimatedTotal = 13000;
+
+        while (hasMore) {
+            var url = SUPABASE_URL + '/rest/v1/facilities?select=*&limit=' + pageSize + '&offset=' + offset;
+            console.log('Fetching page at offset:', offset);
+
+            var pageData = null;
+            var retries = 5;
+            var baseDelay = 2000;
+
+            while (retries > 0) {
+                try {
+                    var response = await fetch(url, {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('API Error: ' + response.status);
+                    }
+
+                    pageData = await response.json();
+                    break;
+                } catch (fetchError) {
+                    retries--;
+                    if (retries === 0) throw fetchError;
+
+                    var delay = baseDelay * Math.pow(2, 4 - retries);
+                    if (statusEl) {
+                        statusEl.textContent = 'Connection issue, retrying in ' + (delay / 1000) + 's...';
+                        statusEl.style.color = '#f59e0b';
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    if (statusEl) {
+                        statusEl.style.color = '';
+                        statusEl.textContent = 'Retrying...';
+                    }
+                }
+            }
+
+            if (pageData.length > 0) {
+                allData = allData.concat(pageData);
+                offset += pageSize;
+
+                var progress = Math.min(100, (allData.length / estimatedTotal) * 100);
+                if (progressEl) progressEl.style.width = progress + '%';
+                if (countEl) countEl.textContent = allData.length.toLocaleString() + ' / 13,000+ records';
+                if (statusEl) {
+                    statusEl.textContent = 'Loading facilities... (' + Math.round(progress) + '%)';
+                    statusEl.style.color = '';
+                }
+            }
+
+            if (pageData.length < pageSize) {
+                hasMore = false;
+            }
+        }
+
+        return allData;
+    },
+
+    processRawData: function (data) {
+        console.log('Processing', data.length, 'records...');
+        var regionsSet = {};
+        var self = this;
+
+        // Transform data
+        this.facilities = data.map(function (f) {
+            var postcode = f['Location Post Code'] || '';
+            var regionCode = f['Location Region'] || '9';
+            var region = UK_REGION_NAMES[regionCode] || 'Unknown';
+            regionsSet[region] = true;
+
+            // Use real geocoded coordinates if available, otherwise fall back to postcode estimation
+            var lat = f.latitude;
+            var lng = f.longitude;
+
+            if (!lat || !lng) {
+                // Fall back to postcode-based estimation
+                var estimatedCoords = self.getPostcodeCoords(postcode);
+                if (estimatedCoords) {
+                    lat = estimatedCoords[0];
+                    lng = estimatedCoords[1];
+                }
+            }
+
+            return {
+                id: f['Location ID'],
+                name: f['Location Name'],
+                isCareHome: f['Care Home?'] === 'Y',
+                overallRating: f['Latest Rating'],
+                domain: f['Domain'] || null,
+                publicationDate: f['Publication Date'] || null,
+                locationType: f['Location Type'] || null,
+                // CQC enrichment fields
+                nominatedIndividual: f['nominated_individual_name'] || null,
+                registeredManager: f['registered_manager_name'] || null,
+                phone: f['cqc_phone'] || null,
+                website: f['cqc_website'] || null,
+                beds: f['number_of_beds'] || null,
+                ratings: {
+                    safe: f['rating_safe'] || null,
+                    effective: f['rating_effective'] || null,
+                    caring: f['rating_caring'] || null,
+                    responsive: f['rating_responsive'] || null,
+                    wellLed: f['rating_wellled'] || null
+                },
+                lastInspection: f['last_inspection_date'] || null,
+                registrationDate: f['registration_date'] || null,
+                latestReportId: f['latest_report_id'] || null,
+                latestReportDate: f['latest_report_date'] || null,
+                cqcLastSynced: f['cqc_last_synced'] || null,
+                address: {
+                    street: f['Location Street Address'],
+                    city: f['Location City'],
+                    postcode: postcode,
+                    region: region,
+                    latitude: lat || null,
+                    longitude: lng || null
+                },
+                provider: {
+                    id: f['Provider ID'],
+                    name: f['Provider Name']
+                },
+                url: f['URL']
+            };
+        });
+
+        // Build lookup map
+        this.facilities.forEach(function (f) {
+            self.facilitiesMap.set(f.id, f);
+        });
+
+        // Store regions
+        this.regions = Object.keys(regionsSet).sort();
+
+        console.log('DataHandler initialized with', this.facilities.length, 'facilities');
     },
 
     getPostcodeCoords: function (postcode) {
