@@ -344,25 +344,58 @@ const PipelineView = {
     },
 
     /**
-     * Move an opportunity to a new stage
+     * Move an opportunity to a new stage (with GHL sync)
      */
     async moveOpportunity(opportunityId, newStageId) {
         console.log(`[PipelineView] Moving opportunity ${opportunityId} to stage ${newStageId}`);
 
-        // Update local state
+        // Find the opportunity and save old state for rollback
         const opportunity = this.opportunities.find(o => o.id === opportunityId);
-        if (opportunity) {
-            opportunity.stageId = newStageId;
+        if (!opportunity) {
+            console.error('[PipelineView] Opportunity not found:', opportunityId);
+            return;
         }
 
-        // Re-render the board
+        const oldStageId = opportunity.stageId;
+
+        // Optimistic update: move immediately in UI
+        opportunity.stageId = newStageId;
         this.renderBoard();
 
-        // TODO: Call API to persist the change
-        // await this.updateOpportunityStage(opportunityId, newStageId);
+        try {
+            // Persist to GHL via API
+            const response = await fetch(`${this.API_BASE}/opportunities/move`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    opportunityId: opportunityId,
+                    stageId: newStageId
+                })
+            });
 
-        // Show success feedback
-        console.log(`[PipelineView] Opportunity moved successfully (local update)`);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `API error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('[PipelineView] ✅ Opportunity moved in GHL:', result);
+
+            // Update badge count
+            this.updateOpportunityCount();
+
+        } catch (error) {
+            console.error('[PipelineView] ❌ Failed to move in GHL, rolling back:', error.message);
+
+            // Rollback to original stage
+            opportunity.stageId = oldStageId;
+            this.renderBoard();
+
+            // Show error to user
+            alert(`Failed to update GoHighLevel: ${error.message}\n\nThe card has been moved back.`);
+        }
     },
 
     /**

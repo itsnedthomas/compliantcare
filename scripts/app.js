@@ -31,6 +31,11 @@ var CRMApp = {
     currentPersonForModal: null,
     peopleMiniMap: null,
 
+    // Sort state for each view: 'off', 'desc', 'asc'
+    propertiesSortState: 'off',
+    providersSortState: 'off',
+    peopleSortState: 'off',
+
     init: async function () {
         console.log('CRMApp initializing...');
 
@@ -53,6 +58,9 @@ var CRMApp = {
 
             // Setup search
             this.setupSearch();
+
+            // Setup sort toggles
+            this.setupSortToggles();
 
             // Render dashboard
             this.renderDashboard();
@@ -221,9 +229,80 @@ var CRMApp = {
         }
     },
 
+    setupSortToggles: function () {
+        var self = this;
+
+        // Properties sort toggle
+        var propertiesSortBtn = document.getElementById('properties-sort-toggle');
+        if (propertiesSortBtn) {
+            propertiesSortBtn.addEventListener('click', function () {
+                self.toggleSort('properties');
+            });
+        }
+
+        // Providers sort toggle
+        var providersSortBtn = document.getElementById('providers-sort-toggle');
+        if (providersSortBtn) {
+            providersSortBtn.addEventListener('click', function () {
+                self.toggleSort('providers');
+            });
+        }
+
+        // People sort toggle
+        var peopleSortBtn = document.getElementById('people-sort-toggle');
+        if (peopleSortBtn) {
+            peopleSortBtn.addEventListener('click', function () {
+                self.toggleSort('people');
+            });
+        }
+    },
+
+    toggleSort: function (type) {
+        var stateKey = type + 'SortState';
+        var currentState = this[stateKey];
+        var nextState;
+
+        // Cycle: off -> desc -> asc -> off
+        if (currentState === 'off') {
+            nextState = 'desc';
+        } else if (currentState === 'desc') {
+            nextState = 'asc';
+        } else {
+            nextState = 'off';
+        }
+
+        this[stateKey] = nextState;
+
+        // Update button UI
+        var btn = document.getElementById(type + '-sort-toggle');
+        if (btn) {
+            btn.classList.remove('active', 'desc', 'asc');
+            var label = btn.querySelector('.sort-label');
+            if (nextState === 'off') {
+                label.textContent = 'Default';
+            } else if (nextState === 'desc') {
+                btn.classList.add('active', 'desc');
+                label.textContent = 'High→Low';
+            } else {
+                btn.classList.add('active', 'asc');
+                label.textContent = 'Low→High';
+            }
+        }
+
+        // Apply sorting based on type
+        if (type === 'properties') {
+            this.filterFacilities();
+        } else if (type === 'providers') {
+            this.filterProviders();
+        } else if (type === 'people') {
+            this.filterPeople();
+        }
+    },
+
     // Sidebar filters removed - only search and rating tabs remain
 
     filterFacilities: function () {
+        var self = this;
         var facilities = this.getGlobalFilteredFacilities(); // Use global filtered list
         var searchInput = document.getElementById('search-input');
         var searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
@@ -232,9 +311,22 @@ var CRMApp = {
             // Search
             if (searchTerm && f.name.toLowerCase().indexOf(searchTerm) === -1) return false;
             // Rating filter (from tabs)
-            if (this.ratingFilter && f.overallRating !== this.ratingFilter) return false;
+            if (self.ratingFilter && f.overallRating !== self.ratingFilter) return false;
             return true;
-        }.bind(this));
+        });
+
+        // Apply sorting based on propertiesSortState (sort by number of beds)
+        if (this.propertiesSortState !== 'off') {
+            this.filteredFacilities.sort(function (a, b) {
+                var aValue = a.numberOfBeds || 0;
+                var bValue = b.numberOfBeds || 0;
+                if (self.propertiesSortState === 'desc') {
+                    return bValue - aValue;
+                } else {
+                    return aValue - bValue;
+                }
+            });
+        }
 
         this.currentPage = 1;
         this.renderListPage();
@@ -2410,6 +2502,20 @@ var CRMApp = {
             return true;
         });
 
+        // Apply sorting based on providersSortState (sort by property count)
+        if (this.providersSortState !== 'off') {
+            var self = this;
+            this.filteredProviders.sort(function (a, b) {
+                var aValue = a.stats.total || 0;
+                var bValue = b.stats.total || 0;
+                if (self.providersSortState === 'desc') {
+                    return bValue - aValue;
+                } else {
+                    return aValue - bValue;
+                }
+            });
+        }
+
         this.providerPage = 1;
         this.updateProvidersCount();
         this.renderProviderCards();
@@ -3274,93 +3380,111 @@ var CRMApp = {
     // PEOPLE VIEW FUNCTIONS
     // ========================================
 
+    // Guard to prevent concurrent buildPeopleData calls
+    _buildingPeopleData: null,
+
     buildPeopleData: async function () {
         var self = this;
-        this.peopleData = [];
 
-        try {
-            // Fetch only nominated individuals from Supabase people table
-            var response = await fetch(
-                SUPABASE_URL + '/rest/v1/people?select=*&role=eq.nominated_individual&order=total_beds.desc',
-                {
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                console.error('Failed to fetch people:', response.status);
-                return;
-            }
-
-            var people = await response.json();
-
-            // Map region codes to names
-            var regionMap = {
-                '0': 'East Midlands',
-                '1': 'East of England',
-                '2': 'London',
-                '3': 'North East',
-                '4': 'North West',
-                'Y': 'Yorkshire & Humber',
-                '5': 'South East',
-                '6': 'South West',
-                '7': 'West Midlands',
-                '8': 'Yorkshire and The Humber'
-            };
-
-            // Deduplicate by person name - keep only one entry per unique person (with highest beds)
-            // Since results are ordered by total_beds.desc, first occurrence has highest beds
-            var seenPeople = {};
-
-            people.forEach(function (p) {
-                // Aggressive normalization: lowercase, remove all non-alphanumeric, collapse spaces
-                var normalizedName = (p.name || '')
-                    .toLowerCase()
-                    .replace(/[^a-z0-9\s]/g, '')  // Remove non-alphanumeric except spaces
-                    .replace(/\s+/g, ' ')          // Collapse multiple spaces
-                    .trim();
-
-                // Skip if we already have this person
-                if (seenPeople[normalizedName]) {
-                    return;
-                }
-                seenPeople[normalizedName] = true;
-
-                self.peopleData.push({
-                    id: p.id,
-                    name: p.name || 'Unknown',
-                    role: p.role,
-                    roleLabel: 'Nominated Individual',
-                    providerName: p.provider_name || 'Unknown Provider',
-                    providerId: p.provider_id,
-                    totalBeds: p.total_beds || 0,
-                    propertyCount: p.total_properties || 0,
-                    region: regionMap[p.region] || p.region || 'Unknown',
-                    yearsAtProvider: p.years_at_provider || 0,
-                    lastReportRating: p.last_report_rating || 'Unknown',
-                    lastInspectionDate: p.last_inspection_date,
-                    isEnriched: !!p.enriched_at,
-                    email: p.email,
-                    phone: p.phone,
-                    linkedinUrl: p.linkedin_url,
-                    contacted: p.contacted || false,
-                    contactedAt: p.contacted_at,
-                    notes: p.notes
-                });
-
-            });
-
-
-            console.log('Loaded ' + this.peopleData.length + ' people from Supabase');
-        } catch (error) {
-            console.error('Error fetching people:', error);
+        // If already loading, return the existing promise (prevents race condition)
+        if (this._buildingPeopleData) {
+            return this._buildingPeopleData;
         }
 
-        // Update people count badge
-        this.updatePeopleCount();
+        this._buildingPeopleData = (async function () {
+            // Reset the array at the start
+            var newPeopleData = [];
+
+            try {
+                // Fetch only nominated individuals from Supabase people table
+                var response = await fetch(
+                    SUPABASE_URL + '/rest/v1/people?select=*&role=eq.nominated_individual&order=total_beds.desc',
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    console.error('Failed to fetch people:', response.status);
+                    return;
+                }
+
+                var people = await response.json();
+
+                // Map region codes to names
+                var regionMap = {
+                    '0': 'East Midlands',
+                    '1': 'East of England',
+                    '2': 'London',
+                    '3': 'North East',
+                    '4': 'North West',
+                    'Y': 'Yorkshire & Humber',
+                    '5': 'South East',
+                    '6': 'South West',
+                    '7': 'West Midlands',
+                    '8': 'Yorkshire and The Humber'
+                };
+
+                // Deduplicate by person name - keep only one entry per unique person (with highest beds)
+                // Since results are ordered by total_beds.desc, first occurrence has highest beds
+                var seenPeople = {};
+
+                people.forEach(function (p) {
+                    // Aggressive normalization: lowercase, remove all non-alphanumeric, collapse spaces
+                    var normalizedName = (p.name || '')
+                        .toLowerCase()
+                        .replace(/[^a-z0-9\s]/g, '')  // Remove non-alphanumeric except spaces
+                        .replace(/\s+/g, ' ')          // Collapse multiple spaces
+                        .trim();
+
+                    // Skip if we already have this person
+                    if (seenPeople[normalizedName]) {
+                        return;
+                    }
+                    seenPeople[normalizedName] = true;
+
+                    newPeopleData.push({
+                        id: p.id,
+                        name: p.name || 'Unknown',
+                        role: p.role,
+                        roleLabel: 'Nominated Individual',
+                        providerName: p.provider_name || 'Unknown Provider',
+                        providerId: p.provider_id,
+                        totalBeds: p.total_beds || 0,
+                        propertyCount: p.total_properties || 0,
+                        region: regionMap[p.region] || p.region || 'Unknown',
+                        yearsAtProvider: p.years_at_provider || 0,
+                        lastReportRating: p.last_report_rating || 'Unknown',
+                        lastInspectionDate: p.last_inspection_date,
+                        isEnriched: !!p.enriched_at,
+                        email: p.email,
+                        phone: p.phone,
+                        linkedinUrl: p.linkedin_url,
+                        contacted: p.contacted || false,
+                        contactedAt: p.contacted_at,
+                        notes: p.notes
+                    });
+
+                });
+
+                // Assign all at once (atomic operation)
+                self.peopleData = newPeopleData;
+                console.log('Loaded ' + self.peopleData.length + ' unique people from Supabase');
+            } catch (error) {
+                console.error('Error fetching people:', error);
+            } finally {
+                // Clear the guard so future calls can rebuild if needed
+                self._buildingPeopleData = null;
+            }
+
+            // Update people count badge
+            self.updatePeopleCount();
+        })();
+
+        return this._buildingPeopleData;
     },
 
 
@@ -3428,10 +3552,33 @@ var CRMApp = {
             });
         }
 
+        // Multi-select beds filter setup
         if (bedsFilter) {
-            bedsFilter.addEventListener('change', function () {
-                self.peoplePage = 1;
-                self.filterPeople();
+            var trigger = bedsFilter.querySelector('.multi-select-trigger');
+            var checkboxes = bedsFilter.querySelectorAll('input[type="checkbox"]');
+
+            // Toggle dropdown on trigger click
+            if (trigger) {
+                trigger.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    bedsFilter.classList.toggle('open');
+                });
+            }
+
+            // Handle checkbox changes
+            checkboxes.forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    self.updatePeopleBedsLabel(bedsFilter);
+                    self.peoplePage = 1;
+                    self.filterPeople();
+                });
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                if (!bedsFilter.contains(e.target)) {
+                    bedsFilter.classList.remove('open');
+                }
             });
         }
 
@@ -3443,12 +3590,34 @@ var CRMApp = {
         }
     },
 
+    updatePeopleBedsLabel: function (dropdown) {
+        var label = dropdown.querySelector('.multi-select-label');
+        var checkboxes = dropdown.querySelectorAll('input[type="checkbox"]:checked');
+
+        if (checkboxes.length === 0) {
+            label.textContent = 'All Sizes';
+        } else if (checkboxes.length === 1) {
+            label.textContent = checkboxes[0].parentNode.textContent.trim();
+        } else {
+            label.textContent = checkboxes.length + ' sizes selected';
+        }
+    },
+
     filterPeople: function () {
         var self = this;
         var searchQuery = document.getElementById('people-search')?.value?.toLowerCase() || '';
         var regionFilter = document.getElementById('people-region-filter')?.value || '';
-        var bedsFilter = document.getElementById('people-beds-filter')?.value || '';
         var outreachFilter = document.getElementById('people-outreach-filter')?.value || '';
+
+        // Get selected bed ranges from multi-select
+        var bedsFilterEl = document.getElementById('people-beds-filter');
+        var selectedBedRanges = [];
+        if (bedsFilterEl) {
+            var checkboxes = bedsFilterEl.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(function (cb) {
+                selectedBedRanges.push(cb.value);
+            });
+        }
 
         this.filteredPeople = this.peopleData.filter(function (person) {
             // Search filter
@@ -3463,13 +3632,17 @@ var CRMApp = {
                 return false;
             }
 
-            // Beds filter
-            if (bedsFilter) {
+            // Beds filter (multi-select)
+            if (selectedBedRanges.length > 0) {
                 var beds = person.totalBeds || 0;
-                if (bedsFilter === '0-50' && (beds < 1 || beds > 50)) return false;
-                if (bedsFilter === '51-200' && (beds < 51 || beds > 200)) return false;
-                if (bedsFilter === '201-500' && (beds < 201 || beds > 500)) return false;
-                if (bedsFilter === '501+' && beds < 501) return false;
+                var matchesRange = selectedBedRanges.some(function (range) {
+                    if (range === '1-50') return beds >= 1 && beds <= 50;
+                    if (range === '51-200') return beds >= 51 && beds <= 200;
+                    if (range === '201-500') return beds >= 201 && beds <= 500;
+                    if (range === '500+') return beds > 500;
+                    return false;
+                });
+                if (!matchesRange) return false;
             }
 
             // Outreach filter
@@ -3478,6 +3651,20 @@ var CRMApp = {
 
             return true;
         });
+
+        // Apply sorting based on peopleSortState (sort by total beds)
+        if (this.peopleSortState !== 'off') {
+            var self = this;
+            this.filteredPeople.sort(function (a, b) {
+                var aValue = a.totalBeds || 0;
+                var bValue = b.totalBeds || 0;
+                if (self.peopleSortState === 'desc') {
+                    return bValue - aValue;
+                } else {
+                    return aValue - bValue;
+                }
+            });
+        }
 
         // Update subtitle
         var subtitleEl = document.getElementById('people-subtitle');

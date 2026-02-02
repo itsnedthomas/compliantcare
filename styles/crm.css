@@ -1903,6 +1903,52 @@ body {
     cursor: pointer;
 }
 
+/* Sort Toggle Button */
+.sort-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.sort-toggle-btn:hover {
+    background: var(--bg-main);
+    border-color: var(--border-dark);
+}
+
+.sort-toggle-btn.active {
+    background: var(--purple-light);
+    border-color: var(--purple);
+    color: var(--purple);
+}
+
+.sort-toggle-btn .sort-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s;
+}
+
+.sort-toggle-btn.desc .sort-icon {
+    transform: rotate(0deg);
+}
+
+.sort-toggle-btn.asc .sort-icon {
+    transform: rotate(180deg);
+}
+
+.sort-toggle-btn .sort-label {
+    font-size: 12px;
+}
+
 /* Providers Grid */
 .providers-grid {
     display: grid;
