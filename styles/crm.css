@@ -375,6 +375,194 @@ body {
     background: var(--color-cta-hover);
 }
 
+/* Global Search Wrapper for suggestions positioning */
+.global-search-wrapper {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+    z-index: 100;
+}
+
+.global-search-wrapper .global-search {
+    margin: 0;
+}
+
+/* Global Search Suggestions Dropdown */
+.global-search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border);
+    max-height: 400px;
+    overflow-y: auto;
+    display: none;
+    z-index: 1000;
+}
+
+.global-search-suggestions.active {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.suggestions-header {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-main);
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background: var(--color-primary-light);
+}
+
+.suggestion-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.suggestion-icon.property {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: white;
+}
+
+.suggestion-icon.provider {
+    background: linear-gradient(135deg, var(--green), #059669);
+    color: white;
+}
+
+.suggestion-icon.person {
+    background: linear-gradient(135deg, var(--blue), #2563eb);
+    color: white;
+}
+
+.suggestion-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.suggestion-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-badge {
+    padding: 4px 8px;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.suggestion-badge.outstanding {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+.suggestion-badge.good {
+    background: var(--blue-bg);
+    color: var(--blue);
+}
+
+.suggestion-badge.requires {
+    background: var(--orange-bg);
+    color: var(--orange);
+}
+
+.suggestion-badge.inadequate {
+    background: var(--red-bg);
+    color: var(--red);
+}
+
+.suggestions-footer {
+    padding: 12px 16px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    background: var(--bg-main);
+}
+
+.suggestions-footer a {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.suggestions-footer a:hover {
+    text-decoration: underline;
+}
+
+.suggestions-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.suggestions-empty svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.suggestions-empty p {
+    font-size: 14px;
+}
+
 /* View Header */
 .view-header {
     display: flex;

@@ -253,6 +253,11 @@ var CRMApp = {
 
     setupSearch: function () {
         var self = this;
+
+        // Setup global search with autocomplete
+        this.setupGlobalSearch();
+
+        // Legacy list view search (if still present)
         var searchInput = document.getElementById('search-input');
         if (searchInput) {
             var timeout;
@@ -260,6 +265,317 @@ var CRMApp = {
                 clearTimeout(timeout);
                 timeout = setTimeout(function () { self.filterFacilities(); }, 300);
             });
+        }
+    },
+
+    setupGlobalSearch: function () {
+        var self = this;
+        var input = document.getElementById('global-search-input');
+        var suggestions = document.getElementById('global-search-suggestions');
+        var typeSelect = document.getElementById('global-search-type');
+        var searchBtn = document.getElementById('global-search-btn');
+
+        if (!input || !suggestions) return;
+
+        var debounceTimer;
+        var selectedIndex = -1;
+
+        // Input handler with debounce
+        input.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            var query = this.value.trim();
+
+            if (query.length < 2) {
+                self.hideGlobalSuggestions();
+                return;
+            }
+
+            debounceTimer = setTimeout(function () {
+                self.performGlobalSearch(query, typeSelect.value);
+            }, 200);
+        });
+
+        // Focus to show recent if no query
+        input.addEventListener('focus', function () {
+            if (this.value.trim().length >= 2) {
+                self.performGlobalSearch(this.value.trim(), typeSelect.value);
+            }
+        });
+
+        // Type change - re-search if there's a query
+        typeSelect.addEventListener('change', function () {
+            var query = input.value.trim();
+            if (query.length >= 2) {
+                self.performGlobalSearch(query, this.value);
+            }
+            // Update placeholder based on type
+            var placeholders = {
+                'properties': 'Search care homes by name or location...',
+                'providers': 'Search providers by name...',
+                'people': 'Search contacts by name or role...'
+            };
+            input.placeholder = placeholders[this.value] || 'Which contacts would you like to reach today?';
+        });
+
+        // Keyboard navigation
+        input.addEventListener('keydown', function (e) {
+            var items = suggestions.querySelectorAll('.suggestion-item');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                self.updateSelectedSuggestion(items, selectedIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                self.updateSelectedSuggestion(items, selectedIndex);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0 && items[selectedIndex]) {
+                    items[selectedIndex].click();
+                } else if (input.value.trim().length >= 2) {
+                    self.executeGlobalSearch(input.value.trim(), typeSelect.value);
+                }
+            } else if (e.key === 'Escape') {
+                self.hideGlobalSuggestions();
+            }
+        });
+
+        // Search button click
+        if (searchBtn) {
+            searchBtn.addEventListener('click', function () {
+                var query = input.value.trim();
+                if (query.length >= 2) {
+                    self.executeGlobalSearch(query, typeSelect.value);
+                }
+            });
+        }
+
+        // Click outside to close
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.global-search-wrapper')) {
+                self.hideGlobalSuggestions();
+            }
+        });
+    },
+
+    performGlobalSearch: function (query, type) {
+        var self = this;
+        var results = [];
+        var q = query.toLowerCase();
+
+        if (type === 'properties') {
+            var facilities = this.getGlobalFilteredFacilities();
+            results = facilities.filter(function (f) {
+                var name = (f.name || '').toLowerCase();
+                var town = (f.address && f.address.townCity || '').toLowerCase();
+                var postcode = (f.address && f.address.postcode || '').toLowerCase();
+                return name.indexOf(q) !== -1 || town.indexOf(q) !== -1 || postcode.indexOf(q) !== -1;
+            }).slice(0, 8).map(function (f) {
+                return {
+                    type: 'property',
+                    id: f.locationId,
+                    title: f.name,
+                    subtitle: (f.address && f.address.townCity || '') + ' • ' + (f.numberOfBeds || 0) + ' beds',
+                    rating: f.overallRating,
+                    data: f
+                };
+            });
+        } else if (type === 'providers') {
+            // Aggregate unique providers if not already done
+            if (!this.providersData || this.providersData.length === 0) {
+                this.aggregateProviders();
+            }
+            results = this.providersData.filter(function (p) {
+                return (p.name || '').toLowerCase().indexOf(q) !== -1;
+            }).slice(0, 8).map(function (p) {
+                return {
+                    type: 'provider',
+                    id: p.id,
+                    title: p.name,
+                    subtitle: p.facilityCount + ' properties • ' + (p.totalBeds || 0) + ' beds',
+                    data: p
+                };
+            });
+        } else if (type === 'people') {
+            if (!this.peopleData || this.peopleData.length === 0) {
+                this.buildPeopleData();
+            }
+            results = this.peopleData.filter(function (person) {
+                var name = (person.name || '').toLowerCase();
+                var role = (person.role || '').toLowerCase();
+                var provider = (person.provider_name || '').toLowerCase();
+                return name.indexOf(q) !== -1 || role.indexOf(q) !== -1 || provider.indexOf(q) !== -1;
+            }).slice(0, 8).map(function (person) {
+                return {
+                    type: 'person',
+                    id: person.id,
+                    title: person.name,
+                    subtitle: person.role + ' • ' + (person.provider_name || 'Unknown Provider'),
+                    data: person
+                };
+            });
+        }
+
+        this.renderGlobalSuggestions(results, type, query);
+    },
+
+    renderGlobalSuggestions: function (results, type, query) {
+        var suggestions = document.getElementById('global-search-suggestions');
+        if (!suggestions) return;
+
+        if (results.length === 0) {
+            suggestions.innerHTML = '<div class="suggestions-empty">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                '<circle cx="11" cy="11" r="8"></circle>' +
+                '<path d="m21 21-4.35-4.35"></path>' +
+                '</svg>' +
+                '<p>No ' + type + ' found for "' + this.escapeHtml(query) + '"</p>' +
+                '</div>';
+            suggestions.classList.add('active');
+            return;
+        }
+
+        var typeTitles = { properties: 'Properties', providers: 'Providers', people: 'People' };
+        var html = '<div class="suggestions-header">' + typeTitles[type] + ' (' + results.length + ' results)</div>';
+
+        var self = this;
+        results.forEach(function (r) {
+            var iconClass = r.type === 'property' ? 'property' : (r.type === 'provider' ? 'provider' : 'person');
+            var icon = r.type === 'property' ? '🏠' : (r.type === 'provider' ? '🏢' : '👤');
+
+            html += '<div class="suggestion-item" data-type="' + r.type + '" data-id="' + r.id + '">' +
+                '<div class="suggestion-icon ' + iconClass + '">' + icon + '</div>' +
+                '<div class="suggestion-content">' +
+                '<div class="suggestion-title">' + self.highlightMatch(r.title, query) + '</div>' +
+                '<div class="suggestion-subtitle">' + r.subtitle + '</div>' +
+                '</div>';
+
+            if (r.rating) {
+                var badgeClass = self.getRatingBadgeClass(r.rating);
+                html += '<span class="suggestion-badge ' + badgeClass + '">' + r.rating + '</span>';
+            }
+
+            html += '</div>';
+        });
+
+        html += '<div class="suggestions-footer">' +
+            '<a href="#" class="view-all-link">View all ' + type + ' →</a>' +
+            '</div>';
+
+        suggestions.innerHTML = html;
+        suggestions.classList.add('active');
+
+        // Attach click handlers
+        suggestions.querySelectorAll('.suggestion-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                var itemType = this.getAttribute('data-type');
+                var itemId = this.getAttribute('data-id');
+                self.handleSuggestionClick(itemType, itemId);
+            });
+        });
+
+        // View all link
+        var viewAllLink = suggestions.querySelector('.view-all-link');
+        if (viewAllLink) {
+            viewAllLink.addEventListener('click', function (e) {
+                e.preventDefault();
+                var input = document.getElementById('global-search-input');
+                self.executeGlobalSearch(input ? input.value : '', type);
+            });
+        }
+    },
+
+    highlightMatch: function (text, query) {
+        if (!query) return this.escapeHtml(text);
+        var escaped = this.escapeHtml(text);
+        var regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return escaped.replace(regex, '<strong>$1</strong>');
+    },
+
+    escapeHtml: function (text) {
+        var div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    },
+
+    getRatingBadgeClass: function (rating) {
+        if (!rating) return '';
+        var r = rating.toLowerCase();
+        if (r === 'outstanding') return 'outstanding';
+        if (r === 'good') return 'good';
+        if (r.indexOf('requires') !== -1) return 'requires';
+        if (r === 'inadequate') return 'inadequate';
+        return '';
+    },
+
+    updateSelectedSuggestion: function (items, index) {
+        items.forEach(function (item, i) {
+            item.classList.toggle('active', i === index);
+        });
+        if (items[index]) {
+            items[index].scrollIntoView({ block: 'nearest' });
+        }
+    },
+
+    hideGlobalSuggestions: function () {
+        var suggestions = document.getElementById('global-search-suggestions');
+        if (suggestions) {
+            suggestions.classList.remove('active');
+        }
+    },
+
+    handleSuggestionClick: function (type, id) {
+        var self = this;
+        this.hideGlobalSuggestions();
+
+        if (type === 'property') {
+            // Switch to list view and show facility detail
+            this.switchView('list');
+            setTimeout(function () {
+                self.showFacilityDetail(id);
+            }, 100);
+        } else if (type === 'provider') {
+            // Switch to providers view and open provider modal
+            this.switchView('providers');
+            setTimeout(function () {
+                self.showProviderDetail(id);
+            }, 100);
+        } else if (type === 'person') {
+            // Switch to people view and open person modal
+            this.switchView('people');
+            setTimeout(function () {
+                self.showPersonDetail(id);
+            }, 100);
+        }
+    },
+
+    executeGlobalSearch: function (query, type) {
+        this.hideGlobalSuggestions();
+
+        // Navigate to the appropriate view with the search applied
+        if (type === 'properties') {
+            this.switchView('list');
+            var searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = query;
+                this.filterFacilities();
+            }
+        } else if (type === 'providers') {
+            this.switchView('providers');
+            // Apply filter to providers
+            var providerSearch = document.getElementById('provider-search');
+            if (providerSearch) {
+                providerSearch.value = query;
+                this.filterProviders();
+            }
+        } else if (type === 'people') {
+            this.switchView('people');
+            var peopleSearch = document.getElementById('people-search');
+            if (peopleSearch) {
+                peopleSearch.value = query;
+                this.filterPeople();
+            }
         }
     },
 
@@ -2357,6 +2673,112 @@ var CRMApp = {
         a.download = 'facilities_export.csv';
         a.click();
         URL.revokeObjectURL(url);
+    },
+
+    exportPeopleData: function () {
+        var self = this;
+
+        // Show toast notification
+        var showToast = function (message, type, showProgress) {
+            // Remove any existing toast
+            var existingToast = document.querySelector('.export-toast');
+            if (existingToast) existingToast.remove();
+
+            var toast = document.createElement('div');
+            toast.className = 'export-toast' + (type ? ' export-toast--' + type : '');
+            toast.innerHTML = '<div class="export-toast-content">' +
+                (showProgress ? '<div class="export-toast-spinner"></div>' : '') +
+                '<span>' + message + '</span>' +
+                '</div>';
+
+            // Add styles if not already added
+            if (!document.getElementById('export-toast-styles')) {
+                var style = document.createElement('style');
+                style.id = 'export-toast-styles';
+                style.textContent = '.export-toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 16px 24px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 10000; animation: slideInToast 0.3s ease; font-size: 14px; font-weight: 500; }' +
+                    '.export-toast--success { background: linear-gradient(135deg, #10b981, #059669); }' +
+                    '.export-toast--error { background: linear-gradient(135deg, #ef4444, #dc2626); }' +
+                    '.export-toast-content { display: flex; align-items: center; gap: 12px; }' +
+                    '.export-toast-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spinToast 0.8s linear infinite; }' +
+                    '@keyframes slideInToast { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }' +
+                    '@keyframes spinToast { to { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(toast);
+            return toast;
+        };
+
+        // Show processing toast
+        var toast = showToast('Preparing export...', null, true);
+
+        // Export filtered people or all people if no filter is active
+        var people = this.filteredPeople && this.filteredPeople.length ? this.filteredPeople : this.peopleData;
+
+        if (!people || people.length === 0) {
+            toast.remove();
+            showToast('No people data to export. Please wait for data to load.', 'error', false);
+            setTimeout(function () {
+                var errorToast = document.querySelector('.export-toast');
+                if (errorToast) errorToast.remove();
+            }, 3000);
+            return;
+        }
+
+        // Use setTimeout to allow UI to update before processing
+        setTimeout(function () {
+            try {
+                // CSV headers - focused on fields useful for enrichment tools like Lusher
+                var csv = 'Name,Role,Provider,Region,Total Beds,Properties,Email,Phone,LinkedIn URL,Last Rating,Contacted\n';
+
+                people.forEach(function (p) {
+                    // Helper to escape CSV values
+                    var escape = function (val) {
+                        if (val === null || val === undefined) return '';
+                        var str = String(val);
+                        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                        if (str.indexOf(',') !== -1 || str.indexOf('"') !== -1 || str.indexOf('\n') !== -1) {
+                            return '"' + str.replace(/"/g, '""') + '"';
+                        }
+                        return str;
+                    };
+
+                    csv += escape(p.name) + ',';
+                    csv += escape(p.roleLabel || p.role || 'Nominated Individual') + ',';
+                    csv += escape(p.providerName) + ',';
+                    csv += escape(p.region) + ',';
+                    csv += escape(p.totalBeds) + ',';
+                    csv += escape(p.propertyCount) + ',';
+                    csv += escape(p.email || '') + ',';
+                    csv += escape(p.phone || '') + ',';
+                    csv += escape(p.linkedinUrl || '') + ',';
+                    csv += escape(p.lastReportRating || 'Unknown') + ',';
+                    csv += escape(p.contacted ? 'Yes' : 'No') + '\n';
+                });
+
+                // Create and trigger download
+                var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'people_export_' + new Date().toISOString().split('T')[0] + '.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+
+                console.log('Exported ' + people.length + ' people to CSV');
+
+                // Show success toast
+                toast.remove();
+                var successToast = showToast('✓ Exported ' + people.length.toLocaleString() + ' people', 'success', false);
+                setTimeout(function () {
+                    if (successToast) successToast.remove();
+                }, 3000);
+            } catch (err) {
+                console.error('Export error:', err);
+                toast.remove();
+                showToast('Export failed: ' + err.message, 'error', false);
+            }
+        }, 100);
     },
 
     // ===== PROVIDERS PAGE =====
