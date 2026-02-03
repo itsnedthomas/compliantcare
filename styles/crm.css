@@ -5763,3 +5763,345 @@ a.linkedin-direct:hover {
         align-items: center;
     }
 }
+
+/* ========================================
+   LOG CALL MODAL & OUTREACH 
+   ======================================== */
+
+/* Log Call Button in Person Modal */
+.person-action-section {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 16px;
+}
+
+.btn-log-call {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+}
+
+.person-contact-status {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-call_failed {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.status-badge.status-no_answer {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.status-badge.status-not_interested {
+    background: rgba(107, 114, 128, 0.15);
+    color: #4b5563;
+}
+
+.status-badge.status-callback {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.status-badge.status-interested {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+/* Log Call Modal */
+.log-call-modal {
+    max-width: 480px;
+}
+
+.log-call-person-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Outcome Options */
+.outcome-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.outcome-option {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-white);
+}
+
+.outcome-option:hover {
+    border-color: var(--purple);
+    background: rgba(139, 92, 246, 0.03);
+}
+
+.outcome-option input[type="radio"] {
+    display: none;
+}
+
+.outcome-option:has(input:checked) {
+    border-color: var(--purple);
+    background: rgba(139, 92, 246, 0.08);
+}
+
+.outcome-option.outcome-success:has(input:checked) {
+    border-color: var(--color-cta);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.outcome-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.outcome-desc {
+    flex-basis: 100%;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-left: 0;
+}
+
+/* Callback Date Section */
+.callback-date-section {
+    padding: 16px;
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.callback-date-section label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.callback-date-section input[type="date"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+/* Notes Section */
+.notes-section {
+    margin-bottom: 16px;
+}
+
+.notes-section label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.notes-section textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    min-height: 80px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.notes-section textarea:focus {
+    outline: none;
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Modal Footer */
+.log-call-modal .modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-light);
+}
+
+/* ========================================
+   OUTREACH PIPELINE VIEW
+   ======================================== */
+
+.outreach-board {
+    padding: 0 24px 24px;
+    overflow-x: auto;
+}
+
+.outreach-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.outreach-columns {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    min-width: 800px;
+}
+
+.outreach-column {
+    background: var(--bg-light);
+    border-radius: var(--radius-lg);
+    min-height: 400px;
+}
+
+.outreach-column-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.outreach-column-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.outreach-column-count {
+    background: var(--purple);
+    color: white;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.outreach-column.col-call_failed .outreach-column-count {
+    background: #dc2626;
+}
+
+.outreach-column.col-no_answer .outreach-column-count {
+    background: #d97706;
+}
+
+.outreach-column.col-not_interested .outreach-column-count {
+    background: #6b7280;
+}
+
+.outreach-column.col-callback .outreach-column-count {
+    background: #2563eb;
+}
+
+.outreach-column-cards {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.outreach-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.outreach-card:hover {
+    border-color: var(--purple);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.outreach-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.outreach-card-provider {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.outreach-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.outreach-card-date {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.outreach-card-callback {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+}
+
+/* Contact status indicator on people cards */
+.people-card.contacted {
+    border-left: 3px solid var(--purple);
+}
+
+.people-card .contact-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}

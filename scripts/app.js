@@ -246,6 +246,7 @@ var CRMApp = {
         else if (view === 'analytics') this.renderAnalytics();
         else if (view === 'providers') this.renderProvidersView();
         else if (view === 'people') this.renderPeopleView();
+        else if (view === 'outreach') this.renderOutreachView();
         else if (view === 'pipeline' && typeof PipelineView !== 'undefined') PipelineView.onViewActivate();
         else if (view === 'enrichment' && typeof EnrichmentStatus !== 'undefined') EnrichmentStatus.init();
         else if (view === 'free-audit' && typeof FreeAudit !== 'undefined') FreeAudit.init();
@@ -4911,6 +4912,335 @@ var CRMApp = {
         var reportDetails = document.getElementById('report-details');
         if (reportSection) reportSection.classList.remove('expanded');
         if (reportDetails) reportDetails.style.display = 'none';
+    },
+
+    // ========================================
+    // CONTACT TRACKING & OUTREACH
+    // ========================================
+
+    openLogCallModal: function () {
+        if (!this.currentPersonForModal) {
+            console.error('No person selected for log call');
+            return;
+        }
+
+        var modal = document.getElementById('log-call-modal');
+        var personNameEl = document.getElementById('log-call-person-name');
+        var saveBtn = document.getElementById('save-call-btn');
+        var callbackSection = document.getElementById('callback-date-section');
+        var callbackDateInput = document.getElementById('callback-date');
+
+        // Set person name
+        if (personNameEl) personNameEl.textContent = this.currentPersonForModal.name;
+
+        // Reset form
+        var outcomeRadios = document.querySelectorAll('input[name="call-outcome"]');
+        outcomeRadios.forEach(function (r) { r.checked = false; });
+        if (callbackSection) callbackSection.style.display = 'none';
+        if (callbackDateInput) {
+            // Set min date to today
+            var today = new Date().toISOString().split('T')[0];
+            callbackDateInput.min = today;
+            callbackDateInput.value = '';
+        }
+        var notesEl = document.getElementById('call-notes');
+        if (notesEl) notesEl.value = '';
+        if (saveBtn) saveBtn.disabled = true;
+
+        // Setup outcome radio handlers
+        var self = this;
+        outcomeRadios.forEach(function (radio) {
+            radio.onchange = function () {
+                if (saveBtn) saveBtn.disabled = false;
+                // Show/hide callback date picker
+                if (callbackSection) {
+                    callbackSection.style.display = radio.value === 'callback' ? 'block' : 'none';
+                }
+            };
+        });
+
+        // Show modal
+        if (modal) modal.classList.add('active');
+    },
+
+    closeLogCallModal: function () {
+        var modal = document.getElementById('log-call-modal');
+        if (modal) modal.classList.remove('active');
+    },
+
+    saveCallOutcome: async function () {
+        var self = this;
+        var person = this.currentPersonForModal;
+        if (!person) return;
+
+        var selectedOutcome = document.querySelector('input[name="call-outcome"]:checked');
+        if (!selectedOutcome) {
+            alert('Please select an outcome');
+            return;
+        }
+
+        var outcome = selectedOutcome.value;
+        var callbackDate = null;
+        var notes = document.getElementById('call-notes')?.value || '';
+
+        // Get callback date if applicable
+        if (outcome === 'callback') {
+            var dateInput = document.getElementById('callback-date');
+            if (dateInput && dateInput.value) {
+                callbackDate = dateInput.value;
+            } else {
+                alert('Please select a callback date');
+                return;
+            }
+        }
+
+        var saveBtn = document.getElementById('save-call-btn');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+        }
+
+        try {
+            // 1. Create contact log entry
+            var logResponse = await fetch(
+                SUPABASE_URL + '/rest/v1/contact_logs',
+                {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        person_id: person.id,
+                        outcome: outcome,
+                        callback_date: callbackDate,
+                        notes: notes
+                    })
+                }
+            );
+
+            if (!logResponse.ok) {
+                throw new Error('Failed to save contact log');
+            }
+
+            // 2. Update person's contact_status
+            var updateResponse = await fetch(
+                SUPABASE_URL + '/rest/v1/people?id=eq.' + encodeURIComponent(person.id),
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        contact_status: outcome
+                    })
+                }
+            );
+
+            if (!updateResponse.ok) {
+                throw new Error('Failed to update person status');
+            }
+
+            // 3. If "interested", create GoHighLevel opportunity
+            if (outcome === 'interested' && typeof PipelineView !== 'undefined') {
+                console.log('Creating prospect opportunity for:', person.name);
+                // This would integrate with their GoHighLevel pipeline
+                // For now, just log it
+            }
+
+            // 4. Update local data
+            person.contact_status = outcome;
+
+            // 5. Update UI
+            var statusSection = document.getElementById('person-contact-status');
+            var statusBadge = document.getElementById('person-status-badge');
+            if (statusSection && statusBadge) {
+                statusSection.style.display = 'block';
+                statusBadge.textContent = this.formatOutcomeLabel(outcome);
+                statusBadge.className = 'status-badge status-' + outcome;
+            }
+
+            // 6. Close modal and show success
+            this.closeLogCallModal();
+            this.closePersonDetail();
+
+            // 7. Refresh people cards to show contacted status
+            this.renderPeopleCards();
+
+            // 8. Update outreach count
+            this.updateOutreachCount();
+
+            console.log('Contact logged successfully:', outcome);
+
+        } catch (error) {
+            console.error('Error saving call outcome:', error);
+            alert('Failed to save: ' + error.message);
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Outcome';
+            }
+        }
+    },
+
+    formatOutcomeLabel: function (outcome) {
+        var labels = {
+            'call_failed': 'Call Failed',
+            'no_answer': 'No Answer',
+            'not_interested': 'Not Interested',
+            'callback': 'Callback Scheduled',
+            'interested': 'Interested'
+        };
+        return labels[outcome] || outcome;
+    },
+
+    // Outreach Pipeline View
+    renderOutreachView: async function () {
+        var loadingEl = document.getElementById('outreach-loading');
+        var columnsEl = document.getElementById('outreach-columns');
+
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (columnsEl) columnsEl.innerHTML = '';
+
+        try {
+            var data = await this.loadOutreachData();
+
+            if (loadingEl) loadingEl.style.display = 'none';
+
+            // Define columns (excluding 'interested' which goes to prospect pipeline)
+            var columns = [
+                { id: 'call_failed', title: '❌ Call Failed', icon: '❌' },
+                { id: 'no_answer', title: '📵 No Answer', icon: '📵' },
+                { id: 'not_interested', title: '👎 Not Interested', icon: '👎' },
+                { id: 'callback', title: '📅 Callback', icon: '📅' }
+            ];
+
+            var html = '';
+            var self = this;
+
+            columns.forEach(function (col) {
+                var items = data.filter(function (p) { return p.contact_status === col.id; });
+
+                html += '<div class="outreach-column col-' + col.id + '">';
+                html += '<div class="outreach-column-header">';
+                html += '<span class="outreach-column-title">' + col.title + '</span>';
+                html += '<span class="outreach-column-count">' + items.length + '</span>';
+                html += '</div>';
+                html += '<div class="outreach-column-cards">';
+
+                items.forEach(function (person) {
+                    html += '<div class="outreach-card" onclick="CRMApp.showPersonDetail(\'' + person.id + '\')">';
+                    html += '<div class="outreach-card-name">' + self.escapeHtml(person.name) + '</div>';
+                    html += '<div class="outreach-card-provider">' + self.escapeHtml(person.provider_name || '') + '</div>';
+                    html += '<div class="outreach-card-meta">';
+                    if (person.last_contact_at) {
+                        var date = new Date(person.last_contact_at);
+                        html += '<span class="outreach-card-date">' + date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</span>';
+                    }
+                    if (col.id === 'callback' && person.callback_date) {
+                        html += '<span class="outreach-card-callback">📅 ' + new Date(person.callback_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</span>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                });
+
+                if (items.length === 0) {
+                    html += '<div class="empty-column-message" style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">No contacts</div>';
+                }
+
+                html += '</div></div>';
+            });
+
+            if (columnsEl) columnsEl.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error loading outreach data:', error);
+            if (loadingEl) loadingEl.innerHTML = '<p style="color: var(--color-danger);">Failed to load outreach data</p>';
+        }
+    },
+
+    loadOutreachData: async function () {
+        try {
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/outreach_pipeline?select=*&order=last_contact_at.desc',
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                // View might not exist yet - fallback to direct query
+                console.log('Outreach view not found, using fallback query');
+                return await this.loadOutreachDataFallback();
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.warn('Error loading outreach view:', error);
+            return await this.loadOutreachDataFallback();
+        }
+    },
+
+    loadOutreachDataFallback: async function () {
+        try {
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/people?select=id,name,provider_name,property_count,total_beds,contact_status&contact_status=neq.not_contacted&order=name',
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                return [];
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Fallback query failed:', error);
+            return [];
+        }
+    },
+
+    refreshOutreach: function () {
+        this.renderOutreachView();
+    },
+
+    updateOutreachCount: async function () {
+        try {
+            var response = await fetch(
+                SUPABASE_URL + '/rest/v1/people?select=id&contact_status=neq.not_contacted',
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'Prefer': 'count=exact'
+                    }
+                }
+            );
+
+            var countHeader = response.headers.get('content-range');
+            var count = 0;
+            if (countHeader) {
+                var match = countHeader.match(/\/(\d+)/);
+                if (match) count = parseInt(match[1], 10);
+            }
+
+            var countEl = document.getElementById('outreach-count');
+            if (countEl) countEl.textContent = count;
+        } catch (error) {
+            console.warn('Failed to update outreach count:', error);
+        }
     }
 };
 
