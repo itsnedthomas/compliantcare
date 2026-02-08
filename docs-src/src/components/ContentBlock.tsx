@@ -6,7 +6,7 @@ import styles from "./ContentBlock.module.css";
 
 interface ContentBlockProps {
     title: string;
-    description: string;
+    description: string | React.ReactNode;
     imageSrc: string;
     imageAlt: string;
     imagePosition?: "left" | "right";
