@@ -1,0 +1,509 @@
+/* ========================================
+   Navigation Header with Smooth Scroll Animation
+   ======================================== */
+
+/* ----------------------------------------
+   Promo Banner - Fixed at top, reveals on scroll
+   ---------------------------------------- */
+.promoBanner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    background: linear-gradient(135deg, #FDBA74 0%, #FB923C 100%);
+    height: 44px;
+    display: flex;
+    align-items: center;
+    pointer-events: auto;
+    will-change: transform, opacity;
+}
+
+.promoContent {
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+}
+
+.promoText {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: #1f1f1f;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.promoIcon {
+    font-size: var(--text-base);
+}
+
+.promoLink {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: #1f1f1f;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.promoLink:hover {
+    background: rgba(255, 255, 255, 0.4);
+    color: #1f1f1f;
+}
+
+/* ----------------------------------------
+   Main Header - White navbar at top
+   ---------------------------------------- */
+.header {
+    position: fixed;
+    /* Top handled by Framer Motion */
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background-color: var(--color-white);
+    border-bottom: 1px solid var(--color-gray-100);
+    will-change: width, max-width, border-radius, box-shadow, transform;
+    transition:
+        /* Only transition properties not handled by Motion style prop */
+        width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        border-radius 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+/* ----------------------------------------
+   Scrolled State - Floating pill navbar
+   ---------------------------------------- */
+.headerScrolled {
+    left: 50%;
+    right: auto;
+    width: auto;
+    max-width: calc(100% - 48px);
+    transform: translateX(-50%);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.08),
+        0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ----------------------------------------
+   Navigation Bar Structure
+   ---------------------------------------- */
+.nav {
+    height: var(--nav-height);
+    will-change: height;
+    transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.navScrolled {
+    height: 52px;
+}
+
+.container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    transition: padding 0.4s cubic-bezier(0.16, 1, 0.3, 1), gap 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Compact container when scrolled */
+.headerScrolled .container {
+    padding: 0 var(--space-6);
+    gap: var(--space-4);
+}
+
+/* ----------------------------------------
+   Logo
+   ---------------------------------------- */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--color-gray-900);
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: font-size 0.3s ease;
+}
+
+.headerScrolled .logo {
+    font-size: 18px;
+}
+
+.logo:hover {
+    color: var(--color-gray-900);
+}
+
+.logoText {
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+}
+
+.logoWifi {
+    position: relative;
+    top: -8px;
+    margin-left: 2px;
+    transition: all 0.3s ease;
+}
+
+.headerScrolled .logoWifi {
+    top: -6px;
+}
+
+/* ----------------------------------------
+   Navigation List
+   ---------------------------------------- */
+.navList {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.navItem {
+    position: relative;
+}
+
+.navLink {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: var(--font-medium);
+    color: var(--color-gray-700);
+    background: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: var(--radius-lg);
+    transition: all 0.2s ease;
+}
+
+.navLinkText {
+    white-space: nowrap;
+}
+
+/* Compact nav links when scrolled */
+.headerScrolled .navLink {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.navLink:hover {
+    color: var(--color-gray-900);
+    background: var(--color-gray-50);
+}
+
+.chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+}
+
+/* ----------------------------------------
+   Dropdown Menus
+   ---------------------------------------- */
+.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding-top: var(--space-3);
+    min-width: 320px;
+    z-index: 100;
+}
+
+.dropdownContent {
+    background-color: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-gray-100);
+    border-radius: var(--radius-xl);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dropdownItem {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    transition: background-color 0.15s ease;
+}
+
+.dropdownItem:hover {
+    background-color: var(--color-gray-50);
+    color: inherit;
+}
+
+.dropdownTitle {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-gray-900);
+}
+
+.dropdownDescription {
+    font-size: var(--text-xs);
+    color: var(--color-gray-500);
+    line-height: var(--leading-relaxed);
+}
+
+/* ----------------------------------------
+   CTA Button - Consistent sizing
+   ---------------------------------------- */
+.actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ctaButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 20px;
+    height: 42px;
+    min-width: 160px;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    font-size: 14px;
+    font-weight: var(--font-semibold);
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+}
+
+.ctaText {
+    white-space: nowrap;
+}
+
+/* Compact CTA when scrolled - maintain readability */
+.headerScrolled .ctaButton {
+    padding: 0 16px;
+    height: 36px;
+    min-width: 140px;
+    font-size: 13px;
+    gap: 5px;
+}
+
+.headerScrolled .ctaButton svg {
+    width: 14px;
+    height: 14px;
+}
+
+.ctaButton:hover {
+    background-color: var(--color-primary-dark);
+    color: var(--color-white);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+/* ----------------------------------------
+   Mobile Menu Button
+   ---------------------------------------- */
+.mobileMenuBtn {
+    display: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.hamburger {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 2px;
+    background-color: var(--color-gray-900);
+    transition: all 0.2s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-gray-900);
+    transition: all 0.2s ease;
+}
+
+.hamburger::before {
+    top: -6px;
+}
+
+.hamburger::after {
+    bottom: -6px;
+}
+
+.hamburgerOpen {
+    background-color: transparent;
+}
+
+.hamburgerOpen::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+
+.hamburgerOpen::after {
+    bottom: 0;
+    transform: rotate(-45deg);
+}
+
+/* ----------------------------------------
+   Mobile Menu
+   ---------------------------------------- */
+.mobileMenu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--color-white);
+    border-bottom: 1px solid var(--color-gray-100);
+    padding: var(--space-4) var(--space-6);
+    overflow: hidden;
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+.mobileNavItem {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.mobileNavLabel {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-gray-900);
+    margin-bottom: var(--space-2);
+}
+
+.mobileDropdown {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-left: var(--space-4);
+}
+
+.mobileDropdownLink {
+    font-size: var(--text-sm);
+    color: var(--color-gray-600);
+}
+
+.mobileCta {
+    display: block;
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    text-align: center;
+    border-radius: var(--radius-lg);
+}
+
+/* ----------------------------------------
+   Responsive Breakpoints
+   ---------------------------------------- */
+@media (max-width: 1024px) {
+    .navList {
+        display: none;
+    }
+
+    .actions {
+        display: none;
+    }
+
+    .mobileMenuBtn {
+        display: block;
+    }
+
+    .headerScrolled {
+        left: 16px;
+        right: 16px;
+        width: auto;
+        max-width: none;
+        transform: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .promoBanner {
+        height: 40px;
+    }
+
+    .promoText {
+        font-size: var(--text-xs);
+    }
+
+    .promoLink {
+        font-size: var(--text-xs);
+        padding: 3px 10px;
+    }
+
+    .headerScrolled {
+        left: 12px;
+        right: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .promoBanner {
+        height: 36px;
+    }
+
+    .promoContent {
+        gap: var(--space-2);
+    }
+
+    .promoIcon {
+        display: none;
+    }
+
+    .headerScrolled {
+        left: 8px;
+        right: 8px;
+    }
+}

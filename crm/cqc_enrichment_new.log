@@ -1,0 +1,88 @@
+/Users/nedthomas/Desktop/AFO/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+============================================================
+CQC Batch Enrichment Script (Continuous Mode)
+============================================================
+
+--- BATCH 1 ---
+Fetching care homes to enrich...
+Found 1000 care homes to enrich in this batch
+Estimated time for batch: 1.7 minutes
+------------------------------------------------------------
+[100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 1.0/sec | ETA: 14.8 min
+[200/1000] (20.0%) | Success: 200 | Failed: 0 | Rate: 1.0/sec | ETA: 13.9 min
+[300/1000] (30.0%) | Success: 300 | Failed: 0 | Rate: 1.0/sec | ETA: 12.2 min
+[400/1000] (40.0%) | Success: 400 | Failed: 0 | Rate: 1.0/sec | ETA: 10.1 min
+[500/1000] (50.0%) | Success: 500 | Failed: 0 | Rate: 1.0/sec | ETA: 8.5 min
+[600/1000] (60.0%) | Success: 600 | Failed: 0 | Rate: 1.0/sec | ETA: 6.7 min
+[700/1000] (70.0%) | Success: 700 | Failed: 0 | Rate: 1.0/sec | ETA: 5.0 min
+[800/1000] (80.0%) | Success: 800 | Failed: 0 | Rate: 1.0/sec | ETA: 3.3 min
+[900/1000] (90.0%) | Success: 900 | Failed: 0 | Rate: 1.0/sec | ETA: 1.7 min
+[1000/1000] (100.0%) | Success: 1000 | Failed: 0 | Rate: 1.0/sec | ETA: 0.0 min
+
+Batch 1 complete: 1000 success, 0 failed in 16.6 min
+Overall progress: 1000 enriched, 0 failed
+
+--- BATCH 2 ---
+Fetching care homes to enrich...
+Found 1000 care homes to enrich in this batch
+Estimated time for batch: 1.7 minutes
+------------------------------------------------------------
+[100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 1.0/sec | ETA: 14.7 min
+[200/1000] (20.0%) | Success: 200 | Failed: 0 | Rate: 1.1/sec | ETA: 12.7 min
+[300/1000] (30.0%) | Success: 300 | Failed: 0 | Rate: 1.0/sec | ETA: 11.3 min
+[400/1000] (40.0%) | Success: 400 | Failed: 0 | Rate: 1.0/sec | ETA: 9.6 min
+[500/1000] (50.0%) | Success: 500 | Failed: 0 | Rate: 1.0/sec | ETA: 8.0 min
+[600/1000] (60.0%) | Success: 600 | Failed: 0 | Rate: 1.0/sec | ETA: 6.5 min
+  Error: HTTPSConnectionPool(host='qdrbwvxqtgwjgitcambn.supabase.co', port=443): Max retries exceeded with url: /functions/v1/cqc-enrich-full (Caused by SSLError(SSLEOFError(8, 'EOF occurred in violation of protocol (_ssl.c:1129)')))
+[700/1000] (70.0%) | Success: 699 | Failed: 1 | Rate: 1.0/sec | ETA: 4.9 min
+[800/1000] (80.0%) | Success: 799 | Failed: 1 | Rate: 1.0/sec | ETA: 3.3 min
+[900/1000] (90.0%) | Success: 899 | Failed: 1 | Rate: 1.0/sec | ETA: 1.6 min
+[1000/1000] (100.0%) | Success: 999 | Failed: 1 | Rate: 1.0/sec | ETA: 0.0 min
+
+Batch 2 complete: 999 success, 1 failed in 16.4 min
+Overall progress: 1999 enriched, 1 failed
+
+--- BATCH 3 ---
+Fetching care homes to enrich...
+Found 1000 care homes to enrich in this batch
+Estimated time for batch: 1.7 minutes
+------------------------------------------------------------
+[100/1000] (10.0%) | Success: 100 | Failed: 0 | Rate: 1.0/sec | ETA: 15.1 min
+[200/1000] (20.0%) | Success: 200 | Failed: 0 | Rate: 1.0/sec | ETA: 13.7 min
+[300/1000] (30.0%) | Success: 300 | Failed: 0 | Rate: 0.9/sec | ETA: 12.7 min
+[400/1000] (40.0%) | Success: 400 | Failed: 0 | Rate: 0.9/sec | ETA: 10.9 min
+  Error: HTTP 502: <html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></cente
+  Error: HTTPSConnectionPool(host='qdrbwvxqtgwjgitcambn.supabase.co', port=443): Read timed out. (read timeout=30)
+[500/1000] (50.0%) | Success: 498 | Failed: 2 | Rate: 0.8/sec | ETA: 9.9 min
+[600/1000] (60.0%) | Success: 598 | Failed: 2 | Rate: 0.9/sec | ETA: 7.8 min
+[700/1000] (70.0%) | Success: 698 | Failed: 2 | Rate: 0.9/sec | ETA: 5.7 min
+[800/1000] (80.0%) | Success: 798 | Failed: 2 | Rate: 0.9/sec | ETA: 3.8 min
+[900/1000] (90.0%) | Success: 898 | Failed: 2 | Rate: 0.9/sec | ETA: 1.9 min
+[1000/1000] (100.0%) | Success: 998 | Failed: 2 | Rate: 0.9/sec | ETA: 0.0 min
+
+Batch 3 complete: 998 success, 2 failed in 18.7 min
+Overall progress: 2997 enriched, 3 failed
+
+--- BATCH 4 ---
+Fetching care homes to enrich...
+Found 33 care homes to enrich in this batch
+Estimated time for batch: 0.1 minutes
+------------------------------------------------------------
+[33/33] (100.0%) | Success: 33 | Failed: 0 | Rate: 1.0/sec | ETA: 0.0 min
+
+Batch 4 complete: 33 success, 0 failed in 0.5 min
+Overall progress: 3030 enriched, 3 failed
+
+--- BATCH 5 ---
+Fetching care homes to enrich...
+
+============================================================
+ALL CARE HOMES ENRICHED!
+Total successful: 3030
+Total failed: 3
+Total time: 52.3 minutes
+============================================================

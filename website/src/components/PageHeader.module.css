@@ -1,0 +1,90 @@
+.header {
+    position: relative;
+    padding: calc(var(--nav-height) + var(--space-12)) var(--space-6) var(--space-12);
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8F6FF 100%);
+    overflow: hidden;
+    text-align: center;
+}
+
+/* Background Pattern */
+.bgGrid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(0, 0, 0, 0.04) 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bgGlow {
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1000px;
+    height: 1000px;
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    align-items: center;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-full);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-gray-600);
+}
+
+.title {
+    font-family: var(--font-headline);
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--color-gray-900);
+    margin: 0;
+}
+
+.subtitle {
+    font-family: var(--font-sans);
+    font-size: clamp(1.125rem, 2vw, 1.25rem);
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--color-gray-600);
+    max-width: 600px;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .header {
+        min-height: auto;
+        padding: calc(var(--nav-height) + var(--space-8)) var(--space-6) var(--space-10);
+    }
+
+    .title {
+        font-size: 2.25rem;
+    }
+}

@@ -1,0 +1,65 @@
+/* Orange Promotional Banner - Controlled by Framer Motion in parent */
+.banner {
+    width: 100%;
+    /* Position handled by parent motion.div */
+    background: var(--color-primary);
+    height: var(--promo-height);
+    display: flex;
+    align-items: center;
+}
+
+.content {
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.text {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--color-white);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.icon {
+    font-size: var(--text-base);
+}
+
+.link {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-white);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: opacity var(--transition-fast);
+}
+
+.link:hover {
+    opacity: 0.85;
+    color: var(--color-white);
+}
+
+@media (max-width: 640px) {
+    .content {
+        flex-direction: row;
+        gap: var(--space-3);
+        text-align: center;
+    }
+
+    .text {
+        font-size: var(--text-xs);
+    }
+
+    .link {
+        font-size: var(--text-xs);
+    }
+}

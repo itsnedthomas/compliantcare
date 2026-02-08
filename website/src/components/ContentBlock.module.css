@@ -1,0 +1,120 @@
+.section {
+    padding: var(--space-16) 0;
+    overflow: hidden;
+}
+
+.sectionAlt {
+    background-color: var(--color-gray-50);
+}
+
+.container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-16);
+    align-items: center;
+}
+
+/* Text Content */
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.title {
+    font-family: var(--font-headline);
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-gray-900);
+}
+
+.description {
+    font-family: var(--font-sans);
+    font-size: var(--text-lg);
+    line-height: 1.7;
+    color: var(--color-gray-600);
+}
+
+/* List Styling */
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+.listItem {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    font-family: var(--font-sans);
+    color: var(--color-gray-700);
+}
+
+.checkIcon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--color-success);
+    margin-top: 4px;
+}
+
+/* Image Styling */
+.imageWrapper {
+    position: relative;
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+    background: #fff;
+    aspect-ratio: 4/3;
+}
+
+.image {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+}
+
+/* Reordering for Left/Right positioning */
+.container.imageLeft .content {
+    order: 2;
+}
+
+.container.imageLeft .imageWrapper {
+    order: 1;
+}
+
+@media (max-width: 1024px) {
+    .container {
+        grid-template-columns: 1fr;
+        gap: var(--space-10);
+    }
+
+    .container.imageLeft .content,
+    .container.imageLeft .imageWrapper {
+        order: unset;
+    }
+
+    .content {
+        text-align: left;
+        /* Keep left aligned for corporate feel */
+    }
+
+    .section {
+        padding: var(--space-12) 0;
+    }
+}

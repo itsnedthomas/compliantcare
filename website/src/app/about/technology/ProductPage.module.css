@@ -1,0 +1,538 @@
+.main {
+    background-color: #ffffff;
+    color: #1e293b;
+    min-height: 100vh;
+    padding-top: 80px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
+
+/* ============================================
+   LEFT COLUMN: Full-Height Gallery
+   ============================================ */
+
+.galleryWrapper {
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    padding-top: 1.5rem;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f8fafc;
+}
+
+.mainImageContainer {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(145deg, #ffffff, #f1f5f9);
+    border-radius: 24px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.mainImageWrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mainImage {
+    object-fit: contain;
+    padding: 2rem;
+}
+
+.imageLabel {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 0.5rem 1.25rem;
+    border-radius: 100px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1e293b;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.thumbnailGallery {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+}
+
+.thumbnail {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    border: 2px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.thumbnail:hover {
+    border-color: rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.thumbnailActive {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.thumbnailImage {
+    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    padding: 6px;
+}
+
+/* ============================================
+   RIGHT COLUMN: Configurator
+   ============================================ */
+
+.configuratorWrapper {
+    padding: 3rem 2.5rem;
+    padding-bottom: 150px;
+    background: #ffffff;
+}
+
+.header {
+    margin-bottom: 2.5rem;
+}
+
+.newLabel {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 0.35rem 0.9rem;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+}
+
+.title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: #0f172a;
+}
+
+.subtitle {
+    font-size: 1.125rem;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+/* Feature Rows */
+.featureRows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+}
+
+.featureRow {
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.featureRow:hover {
+    background: #f1f5f9;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.featureRowExpanded {
+    background: #f1f5f9;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.featureRowHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.chipIcon {
+    font-size: 1.25rem;
+}
+
+.chipLabel {
+    font-weight: 600;
+    flex: 1;
+    color: #1e293b;
+}
+
+.expandIcon {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    transition: transform 0.3s ease;
+}
+
+.featureRowContent {
+    overflow: hidden;
+    padding-top: 0;
+}
+
+.featureRowContent p {
+    margin: 0;
+    padding-top: 0.75rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Section Titles */
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #0f172a;
+}
+
+/* Option Cards */
+.optionCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.optionCard:hover {
+    background: #f1f5f9;
+    border-color: rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.optionCard.selected {
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
+}
+
+.optionContent h4 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: #1e293b;
+}
+
+.optionContent p {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.optionPrice {
+    text-align: right;
+    font-weight: 600;
+    color: #3b82f6;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.priceSub {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* Quantity Selector */
+.qtySelector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.qtySelector button {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #f8fafc;
+    color: #1e293b;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qtySelector button:hover {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.qtySelector span {
+    min-width: 24px;
+    text-align: center;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Technical Specs */
+.specsList {
+    background: #f8fafc;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.specRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.specRow:last-child {
+    border-bottom: none;
+}
+
+.specLabel {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.specValue {
+    color: #1e293b;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+/* Action Bar (Sticky Bottom) */
+.actionBar {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 50%;
+    max-width: 700px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.25rem 2.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    z-index: 100;
+}
+
+.totalPrice {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.totalLabel {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.totalAmount {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.buyButton {
+    padding: 0.875rem 2rem;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    flex-shrink: 0;
+}
+
+.buyButton:hover {
+    background: linear-gradient(135deg, #ea580c, #c2410c);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.35);
+}
+
+/* ============================================
+   FAQ Section (Full Width Below)
+   ============================================ */
+
+.faqSection {
+    background: #f8fafc;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 4rem 2rem;
+}
+
+.faqContainer {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.faqTitle {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2.5rem;
+    color: #0f172a;
+}
+
+.faqList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.faqItem {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.faqItem:hover {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.faqItemExpanded {
+    background: #ffffff;
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.faqQuestion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #1e293b;
+}
+
+.faqAnswer {
+    overflow: hidden;
+}
+
+.faqAnswer p {
+    margin: 0;
+    padding: 0 1.5rem 1.25rem;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+/* ============================================
+   Responsive Styles
+   ============================================ */
+
+@media (max-width: 1024px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+
+    .galleryWrapper {
+        position: relative;
+        top: 0;
+        height: 500px;
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .actionBar {
+        width: 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .title {
+        font-size: 2.25rem;
+    }
+
+    .galleryWrapper {
+        height: 400px;
+        padding: 1rem;
+    }
+
+    .thumbnail {
+        width: 55px;
+        height: 55px;
+    }
+
+    .configuratorWrapper {
+        padding: 2rem 1.25rem;
+        padding-bottom: 130px;
+    }
+
+    .actionBar {
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .buyButton {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    .faqSection {
+        padding: 3rem 1rem;
+    }
+}
